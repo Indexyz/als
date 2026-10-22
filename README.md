@@ -49,7 +49,9 @@ docker run -d \
 | ENABLE_SPEEDTEST          | true                                                                   | true                                                       | Toggle the speedtest feature                                                            |
 | UTILITIES_PING            | true                                                                   | true                                                       | Toggle the ping feature                                                                 |
 | UTILITIES_SPEEDTESTDOTNET | true                                                                   | true                                                       | Toggle the speedtest.net feature                                                        |
-| UTILITIES_FAKESHELL       | true                                                                   | true                                                       | Toggle the HTML Shell feature                                                           |
+| UTILITIES_TRACEROUTE       | true | true | Toggle Traceroute diagnostics |
+| UTILITIES_MTR              | true | true | Toggle MTR diagnostics |
+| UTILITIES_NEXTTRACE        | true | true | Toggle NextTrace diagnostics |
 | UTILITIES_IPERF3          | true                                                                   | true                                                       | Toggle the iperf3 feature                                                               |
 | UTILITIES_IPERF3_PORT_MIN | 30000                                                                  | 30000                                                      | iperf3 listen port range - from                                                         |
 | UTILITIES_IPERF3_PORT_MAX | 31000                                                                  | 31000                                                      | iperf3 listen port range - to                                                           |
@@ -62,8 +64,12 @@ docker run -d \
 - [x] iPerf3 server
 - [x] Streaming traffic graph
 - [x] Speedtest.net Client
-- [x] Online shell box (limited commands)
-- [x] [NextTrace](https://github.com/nxtrace/NTrace-core) Support
+- [x] Native Ping / Traceroute / MTR / NextTrace UI with a restricted WebSocket API
+
+Ping, Traceroute, MTR and NextTrace now run directly through Go networking libraries. The web terminal, `/session/:session/shell`, local `als --shell` entry and fake-shell command forwarding have been removed; `UTILITIES_FAKESHELL` has no effect. Both frontend and backend accept only valid IPv4, IPv6 or ASCII/Punycode DNS names, with server-owned probe limits.
+
+Ping uses Go ICMP sockets and verifies the reply source, sequence and random payload. Traceroute/MTR/NextTrace import `github.com/nxtrace/NTrace-core/trace` v1.7.5. MTR streams complete statistics snapshots with at most 10 probes per hop. Route tests share one slot while Ping can run alongside them. ALS needs the corresponding socket permissions. Linux supports static builds; macOS requires CGO and system libpcap and is built natively in release CI, with no CLI fallback. iPerf3 and Speedtest.net retain their existing fixed-command integrations. See the [WebSocket protocol and deployment requirements](docs/diagnostics-websocket.md).
+
 ## Thanks to
 https://github.com/librespeed/speedtest
 

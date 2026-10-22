@@ -2,9 +2,11 @@ package client
 
 import (
 	"context"
+	"sync"
 )
 
-var Clients = make(map[string]*ClientSession)
+var clients = make(map[string]*ClientSession)
+var clientsMu sync.RWMutex
 
 type Message struct {
 	Name    string
@@ -16,32 +18,54 @@ type ClientSession struct {
 	ctx     context.Context
 }
 
-func (c *ClientSession) SetContext(ctx context.Context) {
-	c.ctx = ctx
+func Register(id string, session *ClientSession) {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	clients[id] = session
 }
 
+func Lookup(id string) (*ClientSession, bool) {
+	clientsMu.RLock()
+	defer clientsMu.RUnlock()
+	session, ok := clients[id]
+	return session, ok
+}
+
+func Remove(id string) {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	delete(clients, id)
+}
+
+// SetContext must be called before publishing the session with Register.
+func (c *ClientSession) SetContext(ctx context.Context) { c.ctx = ctx }
+func (c *ClientSession) Context() context.Context       { return c.ctx }
+
 func (c *ClientSession) GetContext(requestCtx context.Context) context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		select {
-		case <-c.ctx.Done():
-			cancel()
-			break
-		case <-requestCtx.Done():
-			cancel()
-			break
-		}
-	}()
-
+	ctx, cancel := context.WithCancel(requestCtx)
+	stop := context.AfterFunc(c.ctx, cancel)
+	context.AfterFunc(ctx, func() { stop() })
 	return ctx
 }
 
+func (c *ClientSession) Send(message *Message) {
+	select {
+	case c.Channel <- message:
+	case <-c.ctx.Done():
+	}
+}
+
 func BroadCastMessage(name string, content string) {
-	for _, client := range Clients {
-		client.Channel <- &Message{
-			Name:    name,
-			Content: content,
+	clientsMu.RLock()
+	sessions := make([]*ClientSession, 0, len(clients))
+	for _, session := range clients {
+		sessions = append(sessions, session)
+	}
+	clientsMu.RUnlock()
+	for _, session := range sessions {
+		select {
+		case session.Channel <- &Message{Name: name, Content: content}:
+		case <-session.ctx.Done():
 		}
 	}
 }

@@ -13,10 +13,10 @@ func UpdateInterfaceCache(c *gin.Context) {
 	clientSession := v.(*client.ClientSession)
 
 	interfaceCacheJson, _ := json.Marshal(timer.InterfaceCaches)
-	clientSession.Channel <- &client.Message{
+	clientSession.Send(&client.Message{
 		Name:    "InterfaceCache",
 		Content: string(interfaceCacheJson),
-	}
+	})
 
 	c.JSON(200, &gin.H{
 		"success": true,

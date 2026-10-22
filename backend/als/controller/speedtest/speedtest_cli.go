@@ -52,10 +52,10 @@ func HandleSpeedtestDotNet(c *gin.Context) {
 		pos, totalPos := client.GetQueuePostitionByCtx(ctx)
 		msg, _ := json.Marshal(gin.H{"type": "queue", "pos": pos, "totalPos": totalPos})
 		if !closed {
-			clientSession.Channel <- &client.Message{
+			clientSession.Send(&client.Message{
 				Name:    "SpeedtestStream",
 				Content: string(msg),
-			}
+			})
 		}
 	})
 	args := []string{"--accept-license", "-f", "jsonl"}
@@ -83,10 +83,10 @@ func HandleSpeedtestDotNet(c *gin.Context) {
 				return
 			}
 			if !closed {
-				clientSession.Channel <- &client.Message{
+				clientSession.Send(&client.Message{
 					Name:    "SpeedtestStream",
 					Content: string(buf[:n]),
-				}
+				})
 			}
 		}
 	}

@@ -27,7 +27,8 @@ func LoadFromEnv() {
 		"ENABLE_SPEEDTEST":          &Config.FeatureLibrespeed,
 		"UTILITIES_SPEEDTESTDOTNET": &Config.FeatureSpeedtestDotNet,
 		"UTILITIES_PING":            &Config.FeaturePing,
-		"UTILITIES_FAKESHELL":       &Config.FeatureShell,
+		"UTILITIES_TRACEROUTE":      &Config.FeatureTraceroute,
+		"UTILITIES_NEXTTRACE":       &Config.FeatureNextTrace,
 		"UTILITIES_IPERF3":          &Config.FeatureIperf3,
 		"UTILITIES_MTR":             &Config.FeatureMTR,
 	}
@@ -59,7 +60,5 @@ func LoadFromEnv() {
 		Config.SpeedtestFileList = fileLists
 	}
 
-	if !IsInternalCall {
-		log.Default().Println("Loading config from environment variables...")
-	}
+	log.Default().Println("Loading config from environment variables...")
 }

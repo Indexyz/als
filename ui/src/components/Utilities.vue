@@ -1,115 +1,48 @@
 <script setup>
+import { computed, defineAsyncComponent, shallowRef } from 'vue'
 import { useAppStore } from '@/stores/app'
-const appStore = useAppStore()
-import { shallowRef, computed, defineAsyncComponent, onMounted, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-const { config } = storeToRefs(appStore)
-const _v = (loader) => {
-  return defineAsyncComponent({
-    loader: loader,
-    delay: 200
-  })
-}
+import Diagnostics from './Utilities/Diagnostics.vue'
 
-const tools = ref([
-  {
-    label: 'Ping',
-    show: false,
-    enable: false,
-    componentNode: _v(() => import('./Utilities/Ping.vue'))
-  },
+const appStore = useAppStore()
+const activeTool = shallowRef(null)
+const tools = [
   {
     label: 'IPerf3',
-    show: false,
-    enable: false,
-    componentNode: _v(() => import('./Utilities/IPerf3.vue'))
+    feature: 'feature_iperf3',
+    component: defineAsyncComponent(() => import('./Utilities/IPerf3.vue'))
   },
   {
     label: 'Speedtest.net',
-    show: false,
-    enable: false,
-    componentNode: _v(() => import('./Utilities/SpeedtestNet.vue'))
-  },
-  {
-    label: 'Shell',
-    show: false,
-    enable: false,
-    componentNode: _v(() => import('./Utilities/Shell.vue'))
+    feature: 'feature_speedtest_dot_net',
+    component: defineAsyncComponent(() => import('./Utilities/SpeedtestNet.vue'))
   }
-])
-
-onMounted(() => {
-  for (var tool of tools.value) {
-    const configKey = 'feature_' + tool.label.toLowerCase().replace('.', '_dot_')
-    console.log(configKey, config.value[configKey])
-    tool.enable = config.value[configKey] ?? false
-  }
-})
-
-const toolComponent = shallowRef(null)
-
-watch(
-  () => tools.value.find((tool) => tool.show),
-  (tool) => {
-    if (tool) toolComponent.value = toRaw(tool.componentNode)
-  }
+]
+const enabledTools = computed(() => tools.filter((tool) => appStore.config?.[tool.feature]))
+const hasDiagnostics = computed(() =>
+  ['ping', 'traceroute', 'mtr', 'nexttrace'].some((tool) => appStore.config?.[`feature_${tool}`])
 )
-
-const toolComponentShow = computed({
-  get() {
-    return tools.value.some((tool) => tool.show)
-  },
-  set(newValue) {
-    if (newValue) return
-    for (const tool of tools.value) {
-      if (tool.show) {
-        tool.show = false
-        return
-      }
-    }
+const drawerOpen = computed({
+  get: () => activeTool.value !== null,
+  set: (value) => {
+    if (!value) activeTool.value = null
   }
 })
-
-const hasToolEnable = computed(() => {
-  for (const tool of tools.value) {
-    if (tool.enable) {
-      return true
-    }
-  }
-  return false
-})
-
-const toolComponentLabel = computed(() => {
-  for (const tool of tools.value) {
-    if (tool.show) {
-      return tool.label
-    }
-  }
-  return ''
-})
-
-const handleDrawClosed = () => {
-  toolComponent.value = null
-}
 </script>
 
 <template>
-  <n-card v-if="hasToolEnable">
-    <template #header> {{ $t('network_tools') }} </template>
-    <n-space>
-      <template v-for="tool in tools" :key="tool.label">
-        <n-button v-if="tool.enable" @click="tool.show = true">{{ tool.label }}</n-button>
-      </template>
+  <n-card v-if="hasDiagnostics || enabledTools.length">
+    <template #header>{{ $t('network_tools') }}</template>
+    <Diagnostics v-if="hasDiagnostics" />
+    <n-divider v-if="hasDiagnostics && enabledTools.length" />
+    <n-space v-if="enabledTools.length">
+      <n-button v-for="tool in enabledTools" :key="tool.label" @click="activeTool = tool">{{
+        tool.label
+      }}</n-button>
     </n-space>
   </n-card>
-  <n-drawer
-    v-model:show="toolComponentShow"
-    :width="appStore.drawerWidth"
-    placement="right"
-    @after-leave="handleDrawClosed"
-  >
-    <n-drawer-content :title="toolComponentLabel" closable>
-      <component :is="toolComponent" @closed="toolComponentShow = false" />
+  <n-drawer v-model:show="drawerOpen" :width="appStore.drawerWidth" placement="right">
+    <n-drawer-content :title="activeTool?.label" closable>
+      <component :is="activeTool?.component" v-if="activeTool" @closed="activeTool = null" />
     </n-drawer-content>
   </n-drawer>
 </template>

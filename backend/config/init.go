@@ -9,7 +9,6 @@ import (
 )
 
 var Config *ALSConfig
-var IsInternalCall bool
 
 type ALSConfig struct {
 	ListenHost string `json:"-"`
@@ -28,7 +27,7 @@ type ALSConfig struct {
 	SponsorMessage string `json:"sponsor_message"`
 
 	FeaturePing            bool `json:"feature_ping"`
-	FeatureShell           bool `json:"feature_shell"`
+	FeatureNextTrace       bool `json:"feature_nexttrace"`
 	FeatureLibrespeed      bool `json:"feature_librespeed"`
 	FeatureFileSpeedtest   bool `json:"feature_filespeedtest"`
 	FeatureSpeedtestDotNet bool `json:"feature_speedtest_dot_net"`
@@ -51,7 +50,7 @@ func GetDefaultConfig() *ALSConfig {
 		PublicIPv6:        "",
 
 		FeaturePing:            true,
-		FeatureShell:           true,
+		FeatureNextTrace:       true,
 		FeatureLibrespeed:      true,
 		FeatureFileSpeedtest:   true,
 		FeatureSpeedtestDotNet: true,

@@ -21,10 +21,11 @@ func Handle(c *gin.Context) {
 	// uuid := "1"
 	channel := make(chan *client.Message)
 	clientSession := &client.ClientSession{Channel: channel}
-	client.Clients[uuid] = clientSession
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()
 	clientSession.SetContext(ctx)
+	client.Register(uuid, clientSession)
+	defer client.Remove(uuid)
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
@@ -57,6 +58,5 @@ func Handle(c *gin.Context) {
 	}
 
 FINISH:
-	close(channel)
-	delete(client.Clients, uuid)
+	return
 }

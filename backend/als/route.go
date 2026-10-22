@@ -7,10 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samlm0/als/v2/als/controller"
 	"github.com/samlm0/als/v2/als/controller/cache"
+	"github.com/samlm0/als/v2/als/controller/diagnostics"
 	"github.com/samlm0/als/v2/als/controller/iperf3"
-	"github.com/samlm0/als/v2/als/controller/ping"
 	"github.com/samlm0/als/v2/als/controller/session"
-	"github.com/samlm0/als/v2/als/controller/shell"
 	"github.com/samlm0/als/v2/als/controller/speedtest"
 	"github.com/samlm0/als/v2/config"
 	iEmbed "github.com/samlm0/als/v2/embed"
@@ -25,7 +24,7 @@ func SetupHttpRoute(e *gin.Engine) {
 		}
 
 		if config.Config.FeaturePing {
-			v1.GET("/ping", ping.Handle)
+			v1.GET("/ping", diagnostics.HandleLegacyPing)
 		}
 
 		if config.Config.FeatureSpeedtestDotNet {
@@ -39,9 +38,7 @@ func SetupHttpRoute(e *gin.Engine) {
 
 	session := e.Group("/session/:session", controller.MiddlewareSessionOnUrl())
 	{
-		if config.Config.FeatureShell {
-			session.GET("/shell", shell.HandleNewShell)
-		}
+		session.GET("/diagnostics", diagnostics.Handle)
 	}
 
 	speedtestRoute := session.Group("/speedtest", controller.MiddlewareSessionOnUrl())

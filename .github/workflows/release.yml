@@ -33,45 +33,32 @@ jobs:
           path: ui/dist
           if-no-files-found: error
 
-  build-nexttrace:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [amd64, arm64]
-    steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-go@v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-      - name: Build patched nexttrace
-        env:
-          CGO_ENABLED: '0'
-          GOEXPERIMENT: nojsonv2
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: ./scripts/build-nexttrace.sh "nexttrace-${GOOS}-${GOARCH}"
-      - uses: svenstaro/upload-release-action@2.11.5
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: nexttrace-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_name: nexttrace-${{ matrix.goos }}-${{ matrix.goarch }}
-          tag: ${{ github.ref }}
-          overwrite: true
-          make_latest: legacy
-
   build-binaries:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     needs: build-ui
     permissions:
       contents: write
     strategy:
       matrix:
-        goos: [linux, darwin]
-        goarch: [amd64, arm64]
+        include:
+          - goos: linux
+            goarch: amd64
+            runner: ubuntu-24.04
+            cgo: '0'
+          - goos: linux
+            goarch: arm64
+            runner: ubuntu-24.04-arm
+            cgo: '0'
+          # NextTrace's Darwin trace package links the system libpcap through
+          # CGO. Build on each macOS architecture; never fall back to a CLI.
+          - goos: darwin
+            goarch: amd64
+            runner: macos-15-intel
+            cgo: '1'
+          - goos: darwin
+            goarch: arm64
+            runner: macos-15
+            cgo: '1'
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
@@ -83,13 +70,14 @@ jobs:
           name: ui
           path: backend/embed/ui
       - name: Test backend
-        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         working-directory: ./backend
-        run: go test ./...
+        env:
+          CGO_ENABLED: '1'
+        run: go test -race ./...
       - name: Build binary
         working-directory: ./backend
         env:
-          CGO_ENABLED: '0'
+          CGO_ENABLED: ${{ matrix.cgo }}
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: go build -trimpath -o "als-${GOOS}-${GOARCH}" .

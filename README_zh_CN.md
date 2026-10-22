@@ -49,7 +49,9 @@ docker run -d \
 | ENABLE_SPEEDTEST          | true                                                                   | true                                                       | 测速功能开关                                                            |
 | UTILITIES_PING            | true                                                                   | true                                                       | Ping 功能开关                                                                 |
 | UTILITIES_SPEEDTESTDOTNET | true                                                                   | true                                                       | Speedtest.net 功能开关                                                        |
-| UTILITIES_FAKESHELL       | true                                                                   | true                                                       | Shell 功能开关                                                           |
+| UTILITIES_TRACEROUTE       | true | true | Traceroute 功能开关 |
+| UTILITIES_MTR              | true | true | MTR 功能开关 |
+| UTILITIES_NEXTTRACE        | true | true | NextTrace 功能开关 |
 | UTILITIES_IPERF3          | true                                                                   | true                                                       | iPerf3 服务器功能开关                                                               |
 | UTILITIES_IPERF3_PORT_MIN | 30000                                                                  | 30000                                                      | iPerf3 服务器端口范围 - 开始                                                         |
 | UTILITIES_IPERF3_PORT_MAX | 31000                                                                  | 31000                                                      | iPerf3 服务器端口范围 - 结束                                                           |
@@ -62,8 +64,12 @@ docker run -d \
 - [x] iPerf3 服务器控制
 - [x] 实时网卡流量显示
 - [x] Speedtest.net 客户端
-- [x] 在线 shell 盒子 (限制命令)
-- [x] [NextTrace](https://github.com/nxtrace/NTrace-core) 支持
+- [x] Ping / Traceroute / MTR / NextTrace 原生面板与受限 WebSocket API
+
+Ping、Traceroute、MTR、NextTrace 均直接通过 Go 探测，诊断路径不再调用外部命令。网页终端、`/session/:session/shell`、本地 `als --shell` 和旧命令转发代码均已移除，`UTILITIES_FAKESHELL` 不再生效。前后端只接受合法 IPv4、IPv6 或 ASCII/Punycode 域名，探测参数由服务器固定。
+
+Ping 使用 Go ICMP socket，校验回包来源、序号和随机负载；Traceroute/MTR/NextTrace 直接调用 `github.com/nxtrace/NTrace-core/trace` v1.7.5。MTR 每跳最多探测 10 次并实时刷新完整统计快照。路由测试共享一个并发槽，Ping 可并行。ALS 需要相应网络套接字权限；Linux 可静态构建，macOS 需要 CGO 和系统 libpcap，发布流程已改为在 macOS 原生构建，不再回退到命令。iPerf3 和 Speedtest.net 保持原有固定命令集成。接口及部署说明见 [WebSocket 协议文档](docs/diagnostics-websocket.md)。
+
 ## Thanks to
 https://github.com/librespeed/speedtest
 
