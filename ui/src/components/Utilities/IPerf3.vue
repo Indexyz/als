@@ -1,8 +1,8 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/app'
-import 'xterm/css/xterm.css'
-import { Terminal } from 'xterm'
+import '@xterm/xterm/css/xterm.css'
+import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import Copy from '../Copy.vue'
 
@@ -11,8 +11,6 @@ const working = ref(false)
 const port = ref(0)
 const timeout = ref(0)
 const timeoutPercentage = ref(0)
-const timePass = ref(0)
-const timeoutTimer = ref()
 
 const terminal = new Terminal()
 const terminalRef = ref()
@@ -47,7 +45,7 @@ const startServer = async () => {
 
   try {
     await appStore.requestMethod('iperf3/server', {}, abortController.signal)
-  } catch (e) {}
+  } catch {}
 
   working.value = false
 }

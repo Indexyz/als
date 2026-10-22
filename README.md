@@ -1,4 +1,4 @@
-[![docker image build](https://github.com/wikihost-opensource/als/actions/workflows/docker-image.yml/badge.svg)](https://github.com/wikihost-opensource/als/actions/workflows/docker-image.yml)
+[![docker image build](https://github.com/Indexyz/als/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Indexyz/als/actions/workflows/docker-image.yml)
 
 
 Language: English | [简体中文](README_zh_CN.md)
@@ -7,12 +7,18 @@ Language: English | [简体中文](README_zh_CN.md)
 
 ## Quick start
 ```
-docker run -d --name looking-glass --restart always --network host wikihostinc/looking-glass-server
+docker run -d --name looking-glass --restart always --network host ghcr.io/indexyz/als:latest
 ```
+
+Images support `linux/amd64` and `linux/arm64`. `latest` tracks the default branch (`master`) and is updated by pushes, scheduled builds, and manual runs on that branch. Git tag builds publish the matching image tag without updating `latest`; use a published tag or digest to pin a deployment. Pull requests build the image without publishing it.
+
+The image workflow publishes to `ghcr.io/<repository-owner>/<repository-name>` (lowercase) using `GITHUB_TOKEN` with `packages: write`; Docker Hub credentials are no longer needed. After the first successful publication, set the GHCR package visibility to **Public** to allow anonymous pulls. Forks should use their own image path.
+
+To build from source, initialize submodules with `git submodule update --init --recursive`. Local builds use Node.js 24.22.1 and Go 1.27.3; see [UI build instructions](ui/README.md). Both Dockerfiles install frontend dependencies from the committed npm lockfile.
 
 [DEMO](http://lg.hk1-bgp.hkg.50network.com/)
 
-If you don't want to use Docker , you can use the [compiled server](https://github.com/wikihost-opensource/als/releases)
+If you don't want to use Docker , you can use the [compiled server](https://github.com/Indexyz/als/releases)
 
 ## Host Requirements
  - RAM: 32MB or more
@@ -27,7 +33,7 @@ docker run -d \
     -e HTTP_PORT=8080 \
     --restart always \
     --network host \
-    wikihostinc/looking-glass-server
+    ghcr.io/indexyz/als:latest
 ``` 
 
 ## Environment variable table

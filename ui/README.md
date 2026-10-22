@@ -1,35 +1,35 @@
-# als
+# ALS UI
 
-This template should help get you started developing with Vue 3 in Vite.
+The frontend uses Vue 3 and Vite. Use Node.js 24.22.1 (see [.nvmrc](.nvmrc)) and npm.
 
-## Recommended IDE Setup
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
+From the repository root, initialize the LibreSpeed submodule before building:
 
 ```sh
-pnpm install
+git submodule update --init --recursive
 ```
 
-### Compile and Hot-Reload for Development
+Run the following commands from `ui/`:
 
 ```sh
-pnpm dev
+npm ci
+npm run dev
 ```
 
-### Compile and Minify for Production
+The development server proxies `/session` and `/method` to the backend at `http://127.0.0.1:8080`.
+
+To check and build the frontend:
 
 ```sh
-pnpm build
+npm run lint
+npm test
+npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+Use `npm run lint:fix` for automatic lint fixes or `npm run format` to format source files. Commit `package-lock.json` whenever dependencies change so local, Docker, and GitHub Actions builds install the same versions.
+
+To embed the frontend in a local backend build, run these commands from the repository root with Go 1.27.3:
 
 ```sh
-pnpm lint
+cp -R ui/dist/. backend/embed/ui/
+go -C backend build -o ../tmp/als .
 ```

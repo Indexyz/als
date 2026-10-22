@@ -2,7 +2,13 @@
 **/ip.mmdb
 **/.DS_Store
 **/node_modules
-**/package-lock.json
+.git
+**/.git
+**/dist
+backend/embed/ui
+backend/als-linux-*
+backend/als-darwin-*
+tmp
 ui/public/speedtest_worker.js
 backend/app/webspaces/speedtest-static/*
 modules/speedtest/*

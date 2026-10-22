@@ -1,11 +1,11 @@
 <script setup>
 import { useAppStore } from '@/stores/app'
 import Copyable from './Copy.vue'
-import Markdown from 'vue3-markdown-it'
-import { useI18n } from 'vue-i18n'
+import { computed } from 'vue'
+import { renderMarkdown } from '@/helper/markdown'
 
 const appStore = useAppStore()
-const { t } = useI18n({ useScope: 'global' })
+const sponsorMessage = computed(() => renderMarkdown(appStore.config.sponsor_message))
 const configKeyMap = ref({
   location: 'server_location',
   my_ip: 'my_address',
@@ -18,7 +18,7 @@ const configKeyMap = ref({
   <n-card hoverable>
     <template #header> {{ $t('server_info') }} </template>
     <n-grid x-gap="12" cols="1 s:2" responsive="screen" v-if="appStore.config">
-      <template v-for="(index, key) in configKeyMap">
+      <template v-for="(index, key) in configKeyMap" :key="key">
         <template v-if="appStore.config[key]">
           <n-gi span="1" style="margin-bottom: 5px">
             <n-card>
@@ -33,7 +33,7 @@ const configKeyMap = ref({
   <n-card v-if="appStore.config.sponsor_message.length > 0" hoverable style="margin-top: 10px">
     <template #header> {{ $t('sponsor_message') }} </template>
     <div class="sponsor">
-      <Markdown :source="appStore.config.sponsor_message" />
+      <div v-html="sponsorMessage" />
     </div>
   </n-card>
 </template>

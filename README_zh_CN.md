@@ -1,4 +1,4 @@
-[![docker image build](https://github.com/wikihost-opensource/als/actions/workflows/docker-image.yml/badge.svg)](https://github.com/wikihost-opensource/als/actions/workflows/docker-image.yml)
+[![docker image build](https://github.com/Indexyz/als/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Indexyz/als/actions/workflows/docker-image.yml)
 
 
 语言: [English](README.md) | 简体中文
@@ -7,12 +7,18 @@
 
 ## 快速开始 (Docker 环境)
 ```
-docker run -d --name looking-glass --restart always --network host wikihostinc/looking-glass-server
+docker run -d --name looking-glass --restart always --network host ghcr.io/indexyz/als:latest
 ```
+
+镜像支持 `linux/amd64` 和 `linux/arm64`。`latest` 跟随默认分支 `master`，由该分支的推送、定时构建和手动运行更新。Git 标签构建会发布同名镜像标签，不更新 `latest`；需要固定部署版本时，请使用已发布的标签或 digest。Pull Request 只构建镜像，不推送。
+
+镜像工作流使用具有 `packages: write` 权限的 `GITHUB_TOKEN`，自动推送到小写的 `ghcr.io/<仓库所有者>/<仓库名>`，无需配置 Docker Hub 凭据。首次成功发布后，请将 GHCR 软件包的可见性设为 **Public**，以允许匿名拉取。Fork 仓库请使用对应的镜像地址。
+
+从源码构建前，请执行 `git submodule update --init --recursive` 初始化子模块。本地构建使用 Node.js 24.22.1 和 Go 1.27.3，前端步骤见 [UI 构建说明](ui/README.md)。两份 Dockerfile 均使用仓库提交的 npm 锁文件安装前端依赖。
 
 [DEMO](http://lg.hk1-bgp.hkg.50network.com/)
 
-如果不想使用 Docker , 您可以使用编译好的[服务器端](https://github.com/wikihost-opensource/als/releases)
+如果不想使用 Docker , 您可以使用编译好的[服务器端](https://github.com/Indexyz/als/releases)
 
 ## 配置要求
  - 内存: 32MB 或更好
@@ -27,7 +33,7 @@ docker run -d \
     -e HTTP_PORT=8080 \
     --restart always \
     --network host \
-    wikihostinc/looking-glass-server
+    ghcr.io/indexyz/als:latest
 ``` 
 
 ## 环境变量表

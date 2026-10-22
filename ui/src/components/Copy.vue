@@ -1,7 +1,6 @@
 <script setup>
 import { Copy as IconCopy } from '@vicons/carbon'
 
-import { Clipboard } from 'v-clipboard'
 import { useMessage } from 'naive-ui'
 
 const props = defineProps({
@@ -14,7 +13,7 @@ const message = useMessage()
 const copy = async (value) => {
   try {
     await navigator.clipboard.writeText(value)
-  } catch (error) {
+  } catch {
     const textarea = document.createElement('textarea')
     document.body.appendChild(textarea)
     textarea.textContent = value

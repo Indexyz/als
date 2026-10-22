@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/app'
 
 const appStore = useAppStore()
@@ -44,7 +44,7 @@ const ping = async () => {
   appStore.source.addEventListener('Ping', handlePingMessage)
   try {
     await appStore.requestMethod('ping', { ip: host.value }, abortController.signal)
-  } catch (e) {}
+  } catch {}
   stopPing()
   working.value = false
 }
@@ -75,7 +75,7 @@ const ping = async () => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="record in records">
+        <tr v-for="record in records" :key="record.seq">
           <td>{{ record.seq }}</td>
           <td>{{ record.host }}</td>
           <td>{{ record.ttl }}</td>

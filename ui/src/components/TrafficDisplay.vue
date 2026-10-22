@@ -11,7 +11,7 @@ const handleCache = (e) => {
   for (var ifaceIndex in data) {
     const iface = data[ifaceIndex]
     const ifaceName = iface.InterfaceName
-    if (!interfaces.value.hasOwnProperty(ifaceName)) {
+    if (!Object.hasOwn(interfaces.value, ifaceName)) {
       createGraph(ifaceName)
     }
     let localIface = interfaces.value[ifaceName]
@@ -28,7 +28,7 @@ const handleTrafficUpdate = (e) => {
   const ifaceName = data[0]
   const time = data[1]
 
-  if (!interfaces.value.hasOwnProperty(ifaceName)) {
+  if (!Object.hasOwn(interfaces.value, ifaceName)) {
     createGraph(ifaceName)
   }
 
@@ -210,7 +210,7 @@ onUnmounted(() => {
   <n-card hoverable>
     <template #header> {{ $t('server_bandwidth_graph') }} </template>
     <n-grid x-gap="12" cols="1 s:1 m:1 l:2 xl:2 2xl:2" responsive="screen">
-      <n-gi v-for="(interfaceData, interfaceName) in interfaces">
+      <n-gi v-for="(interfaceData, interfaceName) in interfaces" :key="interfaceName">
         <n-card :title="interfaceName">
           <n-grid x-gap="12" :cols="2">
             <n-gi>

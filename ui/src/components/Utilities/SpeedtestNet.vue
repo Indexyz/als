@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { formatBytes } from '@/helper/unit'
 
@@ -118,7 +118,7 @@ const speedtest = async () => {
       { node_id: serverId.value },
       abortController.signal
     )
-  } catch (e) {}
+  } catch {}
   appStore.source.removeEventListener('SpeedtestStream', handleMessage)
   working.value = false
 }

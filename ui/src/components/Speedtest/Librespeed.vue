@@ -1,6 +1,6 @@
 <script setup>
 import { useAppStore } from '@/stores/app'
-import { onMounted, toRaw } from 'vue'
+import { toRaw } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 const appStore = useAppStore()
 

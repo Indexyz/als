@@ -1,7 +1,7 @@
 <script setup>
 import { useAppStore } from '@/stores/app'
 const appStore = useAppStore()
-import { shallowRef, computed, defineAsyncComponent, onMounted } from 'vue'
+import { shallowRef, computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 const { config } = storeToRefs(appStore)
 const _v = (loader) => {
@@ -48,15 +48,16 @@ onMounted(() => {
 
 const toolComponent = shallowRef(null)
 
+watch(
+  () => tools.value.find((tool) => tool.show),
+  (tool) => {
+    if (tool) toolComponent.value = toRaw(tool.componentNode)
+  }
+)
+
 const toolComponentShow = computed({
   get() {
-    for (const tool of tools.value) {
-      if (tool.show) {
-        toolComponent.value = toRaw(tool.componentNode)
-        return true
-      }
-    }
-    return false
+    return tools.value.some((tool) => tool.show)
   },
   set(newValue) {
     if (newValue) return
@@ -96,7 +97,7 @@ const handleDrawClosed = () => {
   <n-card v-if="hasToolEnable">
     <template #header> {{ $t('network_tools') }} </template>
     <n-space>
-      <template v-for="tool in tools">
+      <template v-for="tool in tools" :key="tool.label">
         <n-button v-if="tool.enable" @click="tool.show = true">{{ tool.label }}</n-button>
       </template>
     </n-space>

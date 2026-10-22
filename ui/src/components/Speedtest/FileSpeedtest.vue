@@ -24,6 +24,7 @@ const url = ref(new URL(location.href))
           target="blank"
           :href="'./session/' + appStore.sessionId + '/speedtest/file/' + '/' + fileSize + '.test'"
           v-for="fileSize in appStore.config.speedtest_files"
+          :key="fileSize"
           >{{ fileSize }}</n-button
         >
       </n-space>
@@ -54,6 +55,7 @@ const url = ref(new URL(location.href))
               '.test'
             "
             v-for="fileSize in appStore.config.speedtest_files"
+            :key="fileSize"
             >{{ fileSize }}</n-button
           >
         </n-space>
@@ -82,6 +84,7 @@ const url = ref(new URL(location.href))
               '.test'
             "
             v-for="fileSize in appStore.config.speedtest_files"
+            :key="fileSize"
             >{{ fileSize }}</n-button
           >
         </n-space>
