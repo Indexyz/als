@@ -1,0 +1,218 @@
+--- a/cmd/cmd.go
++++ b/cmd/cmd.go
+@@ -452,8 +452,8 @@
+ 		return tracerouteOutputFlags{
+ 			noStopReason:  parser.Flag("", "no-stop-reason", &argparse.Options{Help: "Hide the traceroute stop summary in terminal and output files"}),
+ 			routePath:     parser.Flag("P", "route-path", &argparse.Options{Help: "Print traceroute hop path by ASN and location"}),
+-			outputPath:    parser.String("o", "output", &argparse.Options{Help: "Write realtime trace output and final stop reason to FILE"}),
+-			outputDefault: parser.Flag("O", "output-default", &argparse.Options{Help: "Write realtime trace output and final stop reason to the default log file (/tmp/trace.log)"}),
++			outputPath:    ptrStr(""),
++			outputDefault: ptrBool(false),
+ 			tablePrint:    parser.Flag("", "table", &argparse.Options{Help: "Output trace results as a final summary table (traceroute report mode)"}),
+ 			jsonPrint:     jsonPrint,
+ 			classicPrint:  parser.Flag("c", "classic", &argparse.Options{Help: "Classic Output trace results like BestTrace"}),
+@@ -591,13 +591,30 @@
+ 	}
+ }
+ 
+-func registerFileFlag(parser *argparse.Parser) *string {
+-	if enableTraceroute {
+-		return parser.String("", "file", &argparse.Options{Help: "Read IP Address or domain name from file"})
+-	}
++func registerFileFlag(_ *argparse.Parser) *string {
++	// Downstream builds deliberately omit --file because it accepts an
++	// attacker-controlled filesystem path.
+ 	return ptrStr("")
+ }
+ 
++func rejectRemovedFileOutputFlags(args []string) error {
++	for _, arg := range args {
++		if arg == "--" {
++			return nil
++		}
++		if arg == "--file" || strings.HasPrefix(arg, "--file=") ||
++			arg == "--output" || strings.HasPrefix(arg, "--output=") ||
++			arg == "--output-default" || arg == "--mtr-record" || strings.HasPrefix(arg, "--mtr-record=") ||
++			arg == "--mtr-replay" || strings.HasPrefix(arg, "--mtr-replay=") ||
++			arg == "--setup-api-v4-token" || arg == "--init" ||
++			arg == "-o" || strings.HasPrefix(arg, "-o=") || arg == "-O" ||
++			(strings.HasPrefix(arg, "-o") && len(arg) > len("-o") && arg[2] != '-') {
++			return fmt.Errorf("%s is disabled in this downstream build", arg)
++		}
++	}
++	return nil
++}
++
+ func deriveEffectiveMTRModes(mtrMode, reportMode, wideMode, rawPrint bool) effectiveMTRModes {
+ 	mtr := mtrMode || reportMode || wideMode
+ 	return effectiveMTRModes{
+@@ -1393,6 +1410,10 @@
+ }
+ 
+ func Execute() {
++	if err := rejectRemovedFileOutputFlags(os.Args[1:]); err != nil {
++		fmt.Fprintln(os.Stderr, err)
++		os.Exit(2)
++	}
+ 	if handled, exitCode := maybeRunMTRReplayMode(os.Args[1:], os.Stdout, os.Stderr); handled {
+ 		os.Exit(exitCode)
+ 	}
+@@ -1412,7 +1433,7 @@
+ 	parser := argparse.NewParser(appBinName, "An open source visual route tracking CLI tool")
+ 	// Override HelpFunc so positional arg names are sanitized in --help output
+ 	parser.HelpFunc = func(c *argparse.Command, msg interface{}) string {
+-		return sanitizeUsagePositionalArgs(c.Usage(msg)) + "\n  --doctor  Check local probe prerequisites without sending probes; see --doctor --help\n  --mtr-replay FILE  Open a saved MTR session offline; see --mtr-replay --help\n"
++		return sanitizeUsagePositionalArgs(c.Usage(msg)) + "\n  --doctor  Check local probe prerequisites without sending probes; see --doctor --help\n"
+ 	}
+ 	init := registerInitFlag(parser)
+ 	ipv4Only := parser.Flag("4", "ipv4", &argparse.Options{Help: "Use IPv4 only"})
+@@ -1479,7 +1500,7 @@
+ 
+ 	// ── MTR flags (all flavors) ──
+ 	mtrFlags := registerMTRFlags(parser)
+-	mtrRecord := parser.String("", "mtr-record", &argparse.Options{Help: "Save this MTR session to a new file for offline replay"})
++	mtrRecord := ptrStr("")
+ 	mtrMode := mtrFlags.mtrMode
+ 	reportMode := mtrFlags.reportMode
+ 	wideMode := mtrFlags.wideMode
+--- a/cmd/cmd_test.go
++++ b/cmd/cmd_test.go
+@@ -1400,47 +1400,59 @@
+ 	}
+ }
+ 
+-func TestRegisterTracerouteOutputFlagsParsesOutputPath(t *testing.T) {
++func TestRegisterTracerouteOutputFlagsRejectsOutputPath(t *testing.T) {
+ 	if !enableTraceroute {
+ 		t.Skip("normal traceroute output flags are unavailable in the ntr flavor")
+ 	}
+ 	parser := argparse.NewParser("nexttrace", "")
+ 	flags := registerTracerouteOutputFlags(parser)
+-	target := parser.StringPositional(&argparse.Options{})
+ 
+-	if err := parser.Parse([]string{"nexttrace", "-o", "trace.log", "1.1.1.1"}); err != nil {
+-		t.Fatalf("Parse returned error: %v", err)
++	if err := parser.Parse([]string{"nexttrace", "-o", "trace.log", "1.1.1.1"}); err == nil {
++		t.Fatal("--output should be rejected")
+ 	}
+-	if got := strings.TrimSpace(*flags.outputPath); got != "trace.log" {
+-		t.Fatalf("--output = %q, want trace.log", got)
++	if got := strings.TrimSpace(*flags.outputPath); got != "" {
++		t.Fatalf("--output = %q, want empty", got)
+ 	}
+-	if *flags.outputDefault {
+-		t.Fatal("--output-default should be false")
++}
++
++func TestRejectRemovedFileOutputFlags(t *testing.T) {
++	for _, args := range [][]string{
++		{"--file", "/tmp/targets"},
++		{"--file=/tmp/targets"},
++		{"--output", "/tmp/trace.log"},
++		{"--output=/tmp/trace.log"},
++		{"--output-default"},
++		{"--mtr-record", "/tmp/session"},
++		{"--mtr-record=/tmp/session"},
++		{"--mtr-replay", "/tmp/session"},
++		{"--mtr-replay=/tmp/session"},
++		{"--setup-api-v4-token"},
++		{"--init"},
++		{"-o", "/tmp/trace.log"},
++		{"-o/tmp/trace.log"},
++		{"-o=/tmp/trace.log"},
++		{"-O"},
++	} {
++		if err := rejectRemovedFileOutputFlags(args); err == nil {
++			t.Fatalf("unsafe arguments %v were accepted", args)
++		}
+ 	}
+-	if *target != "1.1.1.1" {
+-		t.Fatalf("target = %q, want 1.1.1.1", *target)
++	if err := rejectRemovedFileOutputFlags([]string{"--", "--file", "/tmp/targets"}); err != nil {
++		t.Fatalf("positional arguments were rejected: %v", err)
+ 	}
+ }
+ 
+-func TestRegisterTracerouteOutputFlagsParsesOutputDefault(t *testing.T) {
++func TestRegisterTracerouteOutputFlagsRejectsOutputDefault(t *testing.T) {
+ 	if !enableTraceroute {
+ 		t.Skip("normal traceroute output flags are unavailable in the ntr flavor")
+ 	}
+ 	parser := argparse.NewParser("nexttrace", "")
+ 	flags := registerTracerouteOutputFlags(parser)
+-	target := parser.StringPositional(&argparse.Options{})
+-
+-	if err := parser.Parse([]string{"nexttrace", "-O", "1.1.1.1"}); err != nil {
+-		t.Fatalf("Parse returned error: %v", err)
++	if err := parser.Parse([]string{"nexttrace", "-O"}); err == nil {
++		t.Fatal("--output-default should be rejected")
+ 	}
+-	if !*flags.outputDefault {
+-		t.Fatal("--output-default should be true")
+-	}
+-	if got := strings.TrimSpace(*flags.outputPath); got != "" {
+-		t.Fatalf("--output = %q, want empty", got)
+-	}
+-	if *target != "1.1.1.1" {
+-		t.Fatalf("target = %q, want 1.1.1.1", *target)
++	if *flags.outputDefault {
++		t.Fatal("--output-default should remain disabled")
+ 	}
+ }
+ 
+--- a/cmd/trace_mode_test.go
++++ b/cmd/trace_mode_test.go
+@@ -100,11 +100,16 @@
+ 	registerPacketIntervalFlag(parser)
+ 	registerFileFlag(parser)
+ 	usage := parser.Usage(nil)
+-	for _, flag := range []string{"--traceroute", "--classic", "--output", "--send-time", "--file", "--no-stop-reason"} {
++	for _, flag := range []string{"--traceroute", "--classic", "--send-time", "--no-stop-reason"} {
+ 		if strings.Contains(usage, flag) != enableTraceroute {
+ 			t.Errorf("%s availability incorrect in %s", flag, appBinName)
+ 		}
+ 	}
++	for _, flag := range []string{"--output ", "--output-default", "--file", "--mtr-record", "--mtr-replay"} {
++		if strings.Contains(usage, flag) {
++			t.Errorf("unsafe flag %s unexpectedly available in %s", flag, appBinName)
++		}
++	}
+ 	for _, flag := range []string{"--json", "--report", "--wide", "--show-ips", "--ipinfo"} {
+ 		if !strings.Contains(usage, flag) {
+ 			t.Errorf("missing %s in %s", flag, appBinName)
+@@ -119,15 +124,31 @@
+ 	}
+ }
+ 
++func TestUnsafeFileFlagsAreRejected(t *testing.T) {
++	for _, args := range [][]string{
++		{"--file", "/tmp/targets"},
++		{"--output", "/tmp/trace.log"},
++		{"--output-default"},
++		{"--mtr-record", "/tmp/session"},
++		{"--mtr-replay", "/tmp/session"},
++		{"-o", "/tmp/trace.log"},
++		{"-O"},
++	} {
++		parser := argparse.NewParser(appBinName, "")
++		registerTracerouteOutputFlags(parser)
++		registerFileFlag(parser)
++		if err := parser.Parse(append([]string{appBinName}, args...)); err == nil {
++			t.Fatalf("unsafe arguments %v were accepted", args)
++		}
++	}
++}
++
+ func TestTraditionalOutputFlagsSurviveMTRDefault(t *testing.T) {
+-	for _, flag := range []string{"--json", "--table", "--classic", "--output-default", "--route-path", "--output"} {
++	for _, flag := range []string{"--json", "--table", "--classic", "--route-path"} {
+ 		parser := argparse.NewParser("nexttrace", "")
+ 		registerTracerouteFlagWithAvailability(parser, true)
+ 		flags := registerTracerouteOutputFlagsWithAvailability(parser, true)
+ 		args := []string{"nexttrace", flag}
+-		if flag == "--output" {
+-			args = append(args, "trace.log")
+-		}
+ 		if err := parser.Parse(args); err != nil {
+ 			t.Fatal(err)
+ 		}

@@ -33,6 +33,36 @@ jobs:
           path: ui/dist
           if-no-files-found: error
 
+  build-nexttrace:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Build patched nexttrace
+        env:
+          CGO_ENABLED: '0'
+          GOEXPERIMENT: nojsonv2
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: ./scripts/build-nexttrace.sh "nexttrace-${GOOS}-${GOARCH}"
+      - uses: svenstaro/upload-release-action@2.11.5
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: nexttrace-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_name: nexttrace-${{ matrix.goos }}-${{ matrix.goarch }}
+          tag: ${{ github.ref }}
+          overwrite: true
+          make_latest: legacy
+
   build-binaries:
     runs-on: ubuntu-latest
     needs: build-ui

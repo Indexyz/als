@@ -5,12 +5,31 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strings"
 
 	"github.com/reeflective/console"
 	"github.com/samlm0/als/v2/config"
 	"github.com/samlm0/als/v2/fakeshell/commands"
 	"github.com/spf13/cobra"
 )
+
+func filterNexttraceArgs(args []string) ([]string, error) {
+	for _, arg := range args {
+		if arg == "--" {
+			return args, nil
+		}
+		if arg == "--file" || strings.HasPrefix(arg, "--file=") ||
+			arg == "--output" || strings.HasPrefix(arg, "--output=") ||
+			arg == "--output-default" || arg == "--mtr-record" || strings.HasPrefix(arg, "--mtr-record=") ||
+			arg == "--mtr-replay" || strings.HasPrefix(arg, "--mtr-replay=") ||
+			arg == "--setup-api-v4-token" || arg == "--init" ||
+			arg == "-o" || strings.HasPrefix(arg, "-o=") || arg == "-O" ||
+			(strings.HasPrefix(arg, "-o") && len(arg) > len("-o") && arg[2] != '-') {
+			return nil, errors.New("dangerous nexttrace file flag detected, stop running")
+		}
+	}
+	return args, nil
+}
 
 func defineMenuCommands(a *console.Console) console.Commands {
 	showedIsFirstTime := false
@@ -30,6 +49,7 @@ func defineMenuCommands(a *console.Console) console.Commands {
 		}
 
 		argsFilter := map[string]func([]string) ([]string, error){
+			"nexttrace": filterNexttraceArgs,
 			"ping": func(args []string) ([]string, error) {
 				var re = regexp.MustCompile(`(?m)^-?f$|^-\S+f\S*$`)
 				for _, str := range args {
