@@ -40,7 +40,7 @@ func Handle(c *gin.Context) {
 	configJson, _ := json.Marshal(_config)
 	c.SSEvent("Config", string(configJson))
 	c.Writer.Flush()
-	interfaceCacheJson, _ := json.Marshal(timer.InterfaceCaches)
+	interfaceCacheJson, _ := json.Marshal(timer.InterfaceCachesSnapshot())
 	c.SSEvent("InterfaceCache", string(interfaceCacheJson))
 	c.Writer.Flush()
 

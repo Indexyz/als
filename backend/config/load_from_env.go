@@ -40,18 +40,24 @@ func LoadFromEnv() {
 	}
 
 	for envVar, configField := range envVarsInt {
-		if v := os.Getenv(envVar); len(v) != 0 {
-			v, err := strconv.Atoi(v)
+		if raw := os.Getenv(envVar); raw != "" {
+			value, err := strconv.Atoi(raw)
 			if err != nil {
+				log.Default().Printf("WARN: Invalid integer config %s=%q: %v; keeping default", envVar, raw, err)
 				continue
 			}
-			*configField = v
+			*configField = value
 		}
 	}
 
 	for envVar, configField := range envVarsBool {
-		if v := os.Getenv(envVar); len(v) != 0 {
-			*configField = v == "true"
+		if raw := os.Getenv(envVar); raw != "" {
+			value, err := strconv.ParseBool(raw)
+			if err != nil {
+				log.Default().Printf("WARN: Invalid boolean config %s=%q: %v; keeping default", envVar, raw, err)
+				continue
+			}
+			*configField = value
 		}
 	}
 

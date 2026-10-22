@@ -1,9 +1,10 @@
 <script setup>
-import { onUnmounted } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { formatBytes } from '@/helper/unit'
 
-let abortController = markRaw(new AbortController())
+let abortController = null
+let listeningSource = null
 
 const appStore = useAppStore()
 const working = ref(false)
@@ -42,7 +43,13 @@ const steps = ref({
 })
 
 const handleMessage = (e) => {
-  const data = JSON.parse(e.data)
+  let data
+  try {
+    data = JSON.parse(e.data)
+  } catch (error) {
+    console.error('Invalid speedtest SSE payload', error)
+    return
+  }
   console.log(data)
   switch (data.type) {
     case 'queue':
@@ -83,15 +90,39 @@ const handleMessage = (e) => {
   }
 }
 
-const stopTest = () => {
-  abortController.abort('')
-  appStore.source.removeEventListener('SpeedtestStream', handleMessage)
-  isSpeedtest.value = false
+const removeMessageListener = () => {
+  listeningSource?.removeEventListener('SpeedtestStream', handleMessage)
+  listeningSource = null
 }
+
+const addMessageListener = () => {
+  removeMessageListener()
+  if (appStore.source) {
+    appStore.source.addEventListener('SpeedtestStream', handleMessage)
+    listeningSource = appStore.source
+  }
+}
+
+const stopTest = () => {
+  abortController?.abort()
+  abortController = null
+  removeMessageListener()
+  isSpeedtest.value = false
+  isQueue.value = false
+  working.value = false
+}
+
+watch(
+  () => appStore.source,
+  () => {
+    if (working.value) addMessageListener()
+  }
+)
 
 const speedtest = async () => {
   if (working.value) return false
   abortController = new AbortController()
+  const requestController = abortController
   working.value = true
   isSpeedtest.value = true
   action.value = ''
@@ -111,21 +142,22 @@ const speedtest = async () => {
       pos: ''
     }
   }
-  appStore.source.addEventListener('SpeedtestStream', handleMessage)
+  addMessageListener()
   try {
     await appStore.requestMethod(
       'speedtest_dot_net',
       { node_id: serverId.value },
-      abortController.signal
+      requestController.signal
     )
   } catch {}
-  appStore.source.removeEventListener('SpeedtestStream', handleMessage)
-  working.value = false
+  if (abortController === requestController) {
+    removeMessageListener()
+    abortController = null
+    working.value = false
+  }
 }
 
-onUnmounted(() => {
-  stopTest()
-})
+onUnmounted(stopTest)
 </script>
 
 <template>

@@ -3,7 +3,6 @@ package speedtest
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os/exec"
 	"sync"
@@ -13,90 +12,77 @@ import (
 	"github.com/samlm0/als/v2/als/client"
 )
 
-var count = 1
-var lock = sync.Mutex{}
-
-func fakeQueue() {
-	go func() {
-		lock.Lock()
-		count++
-		lock.Unlock()
-		ctx, cancel := context.WithCancel(context.TODO())
-		client.WaitQueue(ctx, nil)
-		fmt.Println(count)
-		time.Sleep(time.Duration(count) * time.Second)
-		cancel()
-	}()
+func send(ctx context.Context, session *client.ClientSession, message *client.Message) {
+	select {
+	case session.Channel <- message:
+	case <-ctx.Done():
+	}
 }
 
 func HandleSpeedtestDotNet(c *gin.Context) {
-	nodeId, ok := c.GetQuery("node_id")
+	nodeID, ok := c.GetQuery("node_id")
 	v, _ := c.Get("clientSession")
 	clientSession := v.(*client.ClientSession)
 	if !ok {
-		nodeId = ""
+		nodeID = ""
 	}
-	closed := false
-	timeout := time.Second * 60
-	count = 1
-	ctx, cancel := context.WithTimeout(clientSession.GetContext(c.Request.Context()), timeout)
-	defer func() {
-		cancel()
-		closed = true
-	}()
-	go func() {
-		<-ctx.Done()
-		closed = true
-	}()
+
+	ctx, cancel := context.WithTimeout(clientSession.GetContext(c.Request.Context()), 60*time.Second)
+	defer cancel()
+
 	client.WaitQueue(ctx, func() {
 		pos, totalPos := client.GetQueuePostitionByCtx(ctx)
 		msg, _ := json.Marshal(gin.H{"type": "queue", "pos": pos, "totalPos": totalPos})
-		if !closed {
-			clientSession.Send(&client.Message{
-				Name:    "SpeedtestStream",
-				Content: string(msg),
-			})
-		}
+		send(ctx, clientSession, &client.Message{Name: "SpeedtestStream", Content: string(msg)})
 	})
-	args := []string{"--accept-license", "-f", "jsonl"}
-	if nodeId != "" {
-		args = append(args, "-s", nodeId)
+	if ctx.Err() != nil {
+		c.JSON(200, &gin.H{"success": false})
+		return
 	}
-	cmd := exec.Command("speedtest", args...)
 
-	go func() {
-		<-ctx.Done()
-		if cmd.Process != nil {
-			cmd.Process.Kill()
-		}
-	}()
+	args := []string{"--accept-license", "-f", "jsonl"}
+	if nodeID != "" {
+		args = append(args, "-s", nodeID)
+	}
+	cmd := exec.CommandContext(ctx, "speedtest", args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		c.JSON(500, &gin.H{"success": false})
+		return
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		_ = stdout.Close()
+		c.JSON(500, &gin.H{"success": false})
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		_ = stdout.Close()
+		_ = stderr.Close()
+		c.JSON(400, &gin.H{"success": false})
+		return
+	}
 
-	writer := func(pipe io.ReadCloser, err error) {
-		if err != nil {
-			fmt.Println("Pipe closed", err)
-			return
-		}
+	var readers sync.WaitGroup
+	readOutput := func(pipe io.ReadCloser) {
+		defer readers.Done()
+		defer pipe.Close()
+		buf := make([]byte, 1024)
 		for {
-			buf := make([]byte, 1024)
-			n, err := pipe.Read(buf)
-			if err != nil {
+			n, readErr := pipe.Read(buf)
+			if n > 0 {
+				send(ctx, clientSession, &client.Message{Name: "SpeedtestStream", Content: string(buf[:n])})
+			}
+			if readErr != nil {
 				return
 			}
-			if !closed {
-				clientSession.Send(&client.Message{
-					Name:    "SpeedtestStream",
-					Content: string(buf[:n]),
-				})
-			}
 		}
 	}
+	readers.Add(2)
+	go readOutput(stdout)
+	go readOutput(stderr)
 
-	go writer(cmd.StdoutPipe())
-	go writer(cmd.StderrPipe())
-
-	cmd.Run()
-	fmt.Println("speedtest-cli quit")
-	c.JSON(200, &gin.H{
-		"success": true,
-	})
+	_ = cmd.Wait()
+	readers.Wait()
+	c.JSON(200, &gin.H{"success": true})
 }

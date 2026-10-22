@@ -12,7 +12,7 @@ func UpdateInterfaceCache(c *gin.Context) {
 	v, _ := c.Get("clientSession")
 	clientSession := v.(*client.ClientSession)
 
-	interfaceCacheJson, _ := json.Marshal(timer.InterfaceCaches)
+	interfaceCacheJson, _ := json.Marshal(timer.InterfaceCachesSnapshot())
 	clientSession.Send(&client.Message{
 		Name:    "InterfaceCache",
 		Content: string(interfaceCacheJson),

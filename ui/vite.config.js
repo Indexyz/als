@@ -25,6 +25,20 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'apexcharts',
+              test: /node_modules[\\/]?(apexcharts|vue3-apexcharts)[\\/]/
+            }
+          ]
+        }
+      }
+    }
+  },
   plugins: [
     vue(),
     AutoImport({

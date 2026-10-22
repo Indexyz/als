@@ -4,10 +4,11 @@ import { list as langList, setI18nLanguage, loadLocaleMessages, autoLang } from 
 import { useAppStore } from './stores/app'
 import LoadingCard from '@/components/Loading.vue'
 import InfoCard from '@/components/Information.vue'
-import SpeedtestCard from '@/components/Speedtest.vue'
 import UtilitiesCard from '@/components/Utilities.vue'
-import TrafficCard from '@/components/TrafficDisplay.vue'
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
+
+const SpeedtestCard = defineAsyncComponent(() => import('@/components/Speedtest.vue'))
+const TrafficCard = defineAsyncComponent(() => import('@/components/TrafficDisplay.vue'))
 
 const lang = computed(() => {
   return currentLang.value.uiLang()

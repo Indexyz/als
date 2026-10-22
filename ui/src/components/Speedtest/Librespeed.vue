@@ -1,11 +1,12 @@
 <script setup>
+import { onUnmounted, ref, toRaw } from 'vue'
 import { useAppStore } from '@/stores/app'
-import { toRaw } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 const appStore = useAppStore()
 
 let workerInstance = null
 let workerTimer = null
+const MAX_CHART_POINTS = 100
 const working = ref(false)
 const uploadText = ref('...')
 const downloadText = ref('...')
@@ -83,34 +84,64 @@ for (var chartId in charts.value) {
     'chart-librespeed-' + (Math.random() + 1).toString(36).substring(2)
 }
 
-const startOrStopSpeedtest = (force = false) => {
-  if (workerInstance != null) {
-    workerInstance.postMessage('abort')
-    clearInterval(workerTimer)
+const resetCharts = () => {
+  for (const chart of Object.values(charts.value)) {
+    chart.data = []
+    chart.categories = []
+  }
+}
 
+const stopSpeedtest = (force = false) => {
+  if (workerTimer !== null) {
+    clearInterval(workerTimer)
+    workerTimer = null
+  }
+  if (workerInstance !== null) {
+    workerInstance.onmessage = null
+    workerInstance.postMessage('abort')
+    workerInstance.terminate()
     workerInstance = null
-    if (force) {
-      uploadText.value = '...'
-      downloadText.value = '...'
-    }
-    working.value = false
+  }
+  working.value = false
+  if (force) {
+    uploadText.value = '...'
+    downloadText.value = '...'
+  }
+}
+
+const appendChartPoint = (chart, value, pointName) => {
+  chart.data.push(value)
+  chart.categories.push(pointName)
+  if (chart.data.length > MAX_CHART_POINTS) {
+    chart.data.splice(0, chart.data.length - MAX_CHART_POINTS)
+    chart.categories.splice(0, chart.categories.length - MAX_CHART_POINTS)
+  }
+}
+
+const startOrStopSpeedtest = () => {
+  if (workerInstance !== null) {
+    stopSpeedtest()
     return
   }
+  resetCharts()
   working.value = true
-  workerInstance = new Worker('./speedtest_worker.js')
-  workerInstance.onmessage = (e) => {
-    var nowPointName =
-      new Date().getHours().toString().padStart(2, '0') +
-      ':' +
-      new Date().getMinutes().toString().padStart(2, '0') +
-      ':' +
-      new Date().getSeconds().toString().padStart(2, '0')
-
-    var data = JSON.parse(e.data)
+  const worker = new Worker('./speedtest_worker.js')
+  workerInstance = worker
+  worker.onmessage = (e) => {
+    if (workerInstance !== worker) return
+    var nowPointName = new Date().toLocaleTimeString('en-GB', { hour12: false })
+    let data
+    try {
+      data = JSON.parse(e.data)
+    } catch (error) {
+      console.error('Invalid speedtest worker payload', error)
+      return
+    }
     console.log(data)
     var status = data.testState
     if (status >= 4) {
-      return startOrStopSpeedtest(false)
+      stopSpeedtest()
+      return
     }
 
     if (status == 1 && data.dlStatus == 0) {
@@ -120,40 +151,28 @@ const startOrStopSpeedtest = (force = false) => {
 
     if (data.ulStatus) {
       uploadText.value = data.ulStatus
-      charts.value.upload.data.push(data.ulStatus)
-      charts.value.upload.categories.push(nowPointName)
-      chartUploadRef.value.updateOptions({
-        xaxis: {
-          categories: toRaw(charts.value.upload.categories)
-        }
+      appendChartPoint(charts.value.upload, data.ulStatus, nowPointName)
+      chartUploadRef.value?.updateOptions({
+        xaxis: { categories: toRaw(charts.value.upload.categories) }
       })
-      chartUploadRef.value.updateSeries([
-        {
-          name: 'Receive',
-          data: toRaw(charts.value.upload.data)
-        }
+      chartUploadRef.value?.updateSeries([
+        { name: 'Receive', data: toRaw(charts.value.upload.data) }
       ])
       return
     }
 
     if (data.dlStatus) {
       downloadText.value = data.dlStatus
-      charts.value.download.data.push(data.dlStatus)
-      charts.value.download.categories.push(nowPointName)
-      chartDownloadRef.value.updateOptions({
-        xaxis: {
-          categories: toRaw(charts.value.download.categories)
-        }
+      appendChartPoint(charts.value.download, data.dlStatus, nowPointName)
+      chartDownloadRef.value?.updateOptions({
+        xaxis: { categories: toRaw(charts.value.download.categories) }
       })
-      chartDownloadRef.value.updateSeries([
-        {
-          name: 'Receive',
-          data: toRaw(charts.value.download.data)
-        }
+      chartDownloadRef.value?.updateSeries([
+        { name: 'Receive', data: toRaw(charts.value.download.data) }
       ])
     }
   }
-  workerInstance.postMessage(
+  worker.postMessage(
     'start ' +
       JSON.stringify({
         test_order: 'D_U',
@@ -163,9 +182,11 @@ const startOrStopSpeedtest = (force = false) => {
       })
   )
   workerTimer = setInterval(() => {
-    workerInstance.postMessage('status')
+    if (workerInstance === worker) worker.postMessage('status')
   }, 200)
 }
+
+onUnmounted(() => stopSpeedtest())
 </script>
 
 <template>

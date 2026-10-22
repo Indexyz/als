@@ -1,11 +1,14 @@
 package config
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"time"
 )
 
 var Config *ALSConfig
@@ -91,30 +94,55 @@ func LoadWebConfig() {
 
 }
 
+const maxSponsorMessageSize int64 = 256 * 1024
+
+func (c *ALSConfig) loadSponsorMessageURL() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.SponsorMessage, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("unexpected HTTP status %s", resp.Status)
+	}
+	content, err := io.ReadAll(io.LimitReader(resp.Body, maxSponsorMessageSize+1))
+	if err != nil {
+		return err
+	}
+	if int64(len(content)) > maxSponsorMessageSize {
+		return fmt.Errorf("response body exceeds %d bytes", maxSponsorMessageSize)
+	}
+	c.SponsorMessage = string(content)
+	return nil
+}
+
 func LoadSponsorMessage() {
 	if Config.SponsorMessage == "" {
 		return
 	}
 
-	log.Default().Println("Loading sponser message...")
+	log.Default().Println("Loading sponsor message...")
 
 	if _, err := os.Stat(Config.SponsorMessage); err == nil {
 		content, err := os.ReadFile(Config.SponsorMessage)
-		if err == nil {
-			Config.SponsorMessage = string(content)
+		if err != nil {
+			log.Default().Printf("ERROR: Failed to read sponsor message file %q: %v", Config.SponsorMessage, err)
 			return
 		}
+		Config.SponsorMessage = string(content)
+		return
 	}
 
-	resp, err := http.Get(Config.SponsorMessage)
-	if err == nil {
-		content, err := io.ReadAll(resp.Body)
-		if err == nil {
-			log.Default().Println("Loaded sponser message from url.")
-			Config.SponsorMessage = string(content)
-			return
-		}
+	if err := Config.loadSponsorMessageURL(); err != nil {
+		log.Default().Printf("ERROR: Failed to load sponsor message from %q: %v", Config.SponsorMessage, err)
+		return
 	}
-
-	log.Default().Println("ERROR: Failed to load sponsor message.")
+	log.Default().Println("Loaded sponsor message from URL.")
 }
