@@ -27,7 +27,6 @@
     "placeholder": "IPv4 / IPv6 / domain",
     "start": "Start test",
     "stop": "Stop test",
-    "input_hint": "Enter a bare IP or domain without spaces, ports or a URL. Use Punycode for internationalized domains.",
     "host": "Host",
     "latency": "Latency",
     "loss": "Loss",
@@ -56,7 +55,7 @@
     },
     "errors": {
       "invalid_request": "Invalid request format.",
-      "invalid_target": "Enter a valid IPv4, IPv6 or domain (such as example.com). Spaces, URLs, ports, CIDRs and command arguments are not allowed.",
+      "invalid_target": "Enter a valid IPv4, IPv6 or domain (such as example.com). URLs, ports, CIDRs and command arguments are not allowed.",
       "invalid_family": "Select a valid IP version.",
       "invalid_tool": "Unknown diagnostic tool.",
       "disabled": "This tool is disabled on the server.",
@@ -96,7 +95,7 @@
   "more_tools": "More tools",
   "open": "Open",
   "file_speedtest_hint": "Download a test file directly from this server to measure throughput.",
-  "librespeed_hint": "Measure download and upload throughput between your browser and this server.",
+  "librespeed_hint": "Measure throughput, idle and loaded latency, and jitter between your browser and this server.",
   "traffic_hint": "Real-time throughput of the server's network interfaces.",
   "traffic_rx_total": "Total received",
   "traffic_tx_total": "Total sent",
@@ -128,5 +127,30 @@
     "upload": "Upload",
     "pending": "Pending",
     "result": "View result"
+  },
+  "speedtest": {
+    "connections": "Connections",
+    "single": "Single",
+    "multi": "Multi ×{count}",
+    "latency": "Latency",
+    "jitter": "Jitter",
+    "download_latency": "Download latency",
+    "upload_latency": "Upload latency",
+    "download_jitter": "Download jitter",
+    "upload_jitter": "Upload jitter",
+    "downloaded": "Downloaded",
+    "uploaded": "Uploaded",
+    "duration": "Duration",
+    "sustained": "Sustained",
+    "again": "Test again",
+    "failed": "The speed test failed. Check your connection and try again.",
+    "hint": "Latency is measured while idle; download/upload latency while the link is saturated (bufferbloat).",
+    "phase": {
+      "idle": "Ready",
+      "latency": "Measuring latency…",
+      "download": "Testing download…",
+      "upload": "Testing upload…",
+      "done": "Completed"
+    }
   }
 }

@@ -1,3 +1,0 @@
-[submodule "ui/speedtest"]
-	path = ui/speedtest
-	url = https://github.com/librespeed/speedtest

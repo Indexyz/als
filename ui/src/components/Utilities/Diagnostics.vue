@@ -21,6 +21,7 @@ import {
   diagnosticURL,
   formatMilliseconds,
   isValidTarget,
+  normalizeTarget,
   latencyTone,
   lossTone,
   rowKey,
@@ -104,10 +105,19 @@ const familyModel = computed({
 })
 
 const working = computed(() => ['connecting', 'running', 'stopping'].includes(status.value))
-const invalid = computed(() => touched.value && target.value !== '' && !isValidTarget(target.value))
-const canStart = computed(
-  () => isValidTarget(target.value) && Boolean(tool.value) && !appStore.connecting
+// Whitespace is trimmed and IDNs are converted to Punycode; validation and the request use the
+// cleaned value, and it is written back to the input on blur and submit.
+const normalizedTarget = computed(() => normalizeTarget(target.value))
+const invalid = computed(
+  () => touched.value && normalizedTarget.value !== '' && !isValidTarget(normalizedTarget.value)
 )
+const canStart = computed(
+  () => isValidTarget(normalizedTarget.value) && Boolean(tool.value) && !appStore.connecting
+)
+function commitTarget(): void {
+  touched.value = true
+  if (target.value !== normalizedTarget.value) target.value = normalizedTarget.value
+}
 const knownErrors = new Set([
   'invalid_request',
   'invalid_target',
@@ -165,7 +175,7 @@ function handleMessage(message: DiagnosticMessage): void {
 }
 function start(): void {
   if (working.value) return
-  touched.value = true
+  commitTarget()
   if (!isValidTarget(target.value)) return
   if (!tool.value || !appStore.sessionId || appStore.connecting) return
   cleanup()
@@ -454,9 +464,8 @@ const statusDot = computed(() => {
             :disabled="working"
             :placeholder="t('diagnostics.placeholder')"
             :aria-invalid="invalid || undefined"
-            :aria-describedby="invalid ? 'diagnostic-target-error' : 'diagnostic-target-hint'"
-            maxlength="254"
-            @blur="touched = true"
+            :aria-describedby="invalid ? 'diagnostic-target-error' : undefined"
+            @blur="commitTarget"
           />
         </div>
         <div class="flex items-end">
@@ -510,9 +519,6 @@ const statusDot = computed(() => {
           class="text-destructive basis-full text-xs"
         >
           {{ t('diagnostics.errors.invalid_target') }}
-        </p>
-        <p v-else id="diagnostic-target-hint" class="text-muted-foreground basis-full text-xs">
-          {{ t('diagnostics.input_hint') }}
         </p>
       </div>
     </form>

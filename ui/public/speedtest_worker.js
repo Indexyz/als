@@ -1,1 +1,0 @@
-../speedtest/speedtest_worker.js

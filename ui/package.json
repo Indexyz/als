@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vue-tsc --build && vite build",
     "preview": "vite preview",
-    "test": "node --test src/helper/*.test.ts",
+    "test": "node --test \"src/helper/**/*.test.ts\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write src/",

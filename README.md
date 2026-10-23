@@ -14,7 +14,7 @@ Images support `linux/amd64` and `linux/arm64`. `latest` tracks the default bran
 
 The image workflow publishes to `ghcr.io/<repository-owner>/<repository-name>` (lowercase) using `GITHUB_TOKEN` with `packages: write`; Docker Hub credentials are no longer needed. After the first successful publication, set the GHCR package visibility to **Public** to allow anonymous pulls. Forks should use their own image path.
 
-To build from source, initialize submodules with `git submodule update --init --recursive`. Local builds use Node.js 24.22.1 and Go 1.27.3; see [UI build instructions](ui/README.md). Both Dockerfiles install frontend dependencies from the committed npm lockfile.
+Local builds use Node.js 24.22.1 and Go 1.27.3; see [UI build instructions](ui/README.md). Both Dockerfiles install frontend dependencies from the committed npm lockfile.
 
 [DEMO](http://lg.hk1-bgp.hkg.50network.com/)
 
@@ -69,11 +69,6 @@ docker run -d \
 Ping, Traceroute, MTR and NextTrace now run directly through Go networking libraries. The web terminal, `/session/:session/shell`, local `als --shell` entry and fake-shell command forwarding have been removed; `UTILITIES_FAKESHELL` has no effect. Both frontend and backend accept only valid IPv4, IPv6 or ASCII/Punycode DNS names, with server-owned probe limits.
 
 Ping uses Go ICMP sockets and verifies the reply source, sequence and random payload. Traceroute/MTR/NextTrace import `github.com/nxtrace/NTrace-core/trace` v1.7.5. MTR streams complete statistics snapshots with at most 10 probes per hop. Route tests share one slot while Ping can run alongside them. ALS needs the corresponding socket permissions. Linux supports static builds; macOS requires CGO and system libpcap and is built natively in release CI, with no CLI fallback. iPerf3 and Speedtest.net retain their existing fixed-command integrations. See the [WebSocket protocol and deployment requirements](docs/diagnostics-websocket.md).
-
-## Thanks to
-https://github.com/librespeed/speedtest
-
-https://www.jetbrains.com/
 
 ## License
 

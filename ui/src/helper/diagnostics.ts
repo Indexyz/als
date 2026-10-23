@@ -70,6 +70,29 @@ export function isValidTarget(value: unknown): value is string {
   )
 }
 
+/**
+ * Clean up what the user typed before validation: trim surrounding whitespace (including
+ * full-width spaces) and convert internationalised domain names to Punycode. Full-width
+ * characters and ideographic full stops are mapped to ASCII the same way browsers do (UTS #46),
+ * so "例子。测试" becomes "xn--fsqu00a.xn--0zwm56d". ASCII input is returned unchanged apart
+ * from trimming, so normalisation never makes an otherwise invalid target valid.
+ */
+export function normalizeTarget(value: string): string {
+  const trimmed = value.trim()
+  // Only bare host names are converted; anything URL-like is left for validation to reject.
+  if (!/\P{ASCII}/u.test(trimmed) || /[\s/\\?#@:%[\]]/.test(trimmed)) return trimmed
+  const mapped = trimmed.normalize('NFKC').replace(/[\u3002\uff0e\uff61]/g, '.')
+  if (!/\P{ASCII}/u.test(mapped)) return mapped
+  // IDNA forbids leading/trailing hyphens; Punycode would hide them behind "xn--".
+  if (mapped.split('.').some((label) => label.startsWith('-') || label.endsWith('-')))
+    return trimmed
+  try {
+    return new URL(`http://${mapped}/`).hostname
+  } catch {
+    return trimmed
+  }
+}
+
 export function diagnosticURL(location: string, sessionId: string): string {
   const url = new URL(`./session/${encodeURIComponent(sessionId)}/diagnostics`, location)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'

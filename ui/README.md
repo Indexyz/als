@@ -4,12 +4,6 @@ The frontend uses Vue 3, TypeScript and Vite, styled with Tailwind CSS v4 and
 [shadcn-vue](https://www.shadcn-vue.com/) components (built on Reka UI). Use Node.js 24.22.1
 (see [.nvmrc](.nvmrc)) and npm.
 
-From the repository root, initialize the LibreSpeed submodule before building:
-
-```sh
-git submodule update --init --recursive
-```
-
 Run the following commands from `ui/`:
 
 ```sh

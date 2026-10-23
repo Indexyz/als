@@ -9,8 +9,6 @@ export default withVueTs(
   { rootDir: import.meta.dirname },
   globalIgnores([
     'dist/**',
-    'speedtest/**',
-    'public/speedtest_worker.js',
     // Generated shadcn-vue primitives; keep them identical to upstream.
     'src/components/ui/**'
   ]),

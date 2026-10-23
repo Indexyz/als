@@ -50,6 +50,8 @@ func SetupHttpRoute(e *gin.Engine) {
 		if config.Config.FeatureLibrespeed {
 			speedtestRoute.GET("/download", speedtest.HandleDownload)
 			speedtestRoute.POST("/upload", speedtest.HandleUpload)
+			speedtestRoute.HEAD("/ping", speedtest.HandlePing)
+			speedtestRoute.GET("/ping", speedtest.HandlePing)
 		}
 	}
 
@@ -63,10 +65,6 @@ func SetupHttpRoute(e *gin.Engine) {
 		filePath := "/index.html"
 		filePath = filePath[1:]
 		handleStatisFile(filePath, c)
-	})
-
-	e.GET("/speedtest_worker.js", func(c *gin.Context) {
-		handleStatisFile("speedtest_worker.js", c)
 	})
 
 	e.GET("/favicon.ico", func(c *gin.Context) {

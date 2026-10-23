@@ -14,7 +14,7 @@ docker run -d --name looking-glass --restart always --network host ghcr.io/index
 
 镜像工作流使用具有 `packages: write` 权限的 `GITHUB_TOKEN`，自动推送到小写的 `ghcr.io/<仓库所有者>/<仓库名>`，无需配置 Docker Hub 凭据。首次成功发布后，请将 GHCR 软件包的可见性设为 **Public**，以允许匿名拉取。Fork 仓库请使用对应的镜像地址。
 
-从源码构建前，请执行 `git submodule update --init --recursive` 初始化子模块。本地构建使用 Node.js 24.22.1 和 Go 1.27.3，前端步骤见 [UI 构建说明](ui/README.md)。两份 Dockerfile 均使用仓库提交的 npm 锁文件安装前端依赖。
+本地构建使用 Node.js 24.22.1 和 Go 1.27.3，前端步骤见 [UI 构建说明](ui/README.md)。两份 Dockerfile 均使用仓库提交的 npm 锁文件安装前端依赖。
 
 [DEMO](http://lg.hk1-bgp.hkg.50network.com/)
 
@@ -69,11 +69,6 @@ docker run -d \
 Ping、Traceroute、MTR、NextTrace 均直接通过 Go 探测，诊断路径不再调用外部命令。网页终端、`/session/:session/shell`、本地 `als --shell` 和旧命令转发代码均已移除，`UTILITIES_FAKESHELL` 不再生效。前后端只接受合法 IPv4、IPv6 或 ASCII/Punycode 域名，探测参数由服务器固定。
 
 Ping 使用 Go ICMP socket，校验回包来源、序号和随机负载；Traceroute/MTR/NextTrace 直接调用 `github.com/nxtrace/NTrace-core/trace` v1.7.5。MTR 每跳最多探测 10 次并实时刷新完整统计快照。路由测试共享一个并发槽，Ping 可并行。ALS 需要相应网络套接字权限；Linux 可静态构建，macOS 需要 CGO 和系统 libpcap，发布流程已改为在 macOS 原生构建，不再回退到命令。iPerf3 和 Speedtest.net 保持原有固定命令集成。接口及部署说明见 [WebSocket 协议文档](docs/diagnostics-websocket.md)。
-
-## Thanks to
-https://github.com/librespeed/speedtest
-
-https://www.jetbrains.com/
 
 ## License
 

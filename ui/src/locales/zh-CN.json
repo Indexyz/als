@@ -27,7 +27,6 @@
     "placeholder": "IPv4 / IPv6 / 域名",
     "start": "开始测试",
     "stop": "停止测试",
-    "input_hint": "请输入纯 IP 或域名，不含空格、端口或 URL；国际化域名请使用 Punycode。",
     "host": "节点地址",
     "latency": "延迟",
     "loss": "丢包率",
@@ -56,7 +55,7 @@
     },
     "errors": {
       "invalid_request": "请求格式不正确。",
-      "invalid_target": "请输入合法的 IPv4、IPv6 或域名（如 example.com）；不支持空白、URL、端口、CIDR 或命令参数。",
+      "invalid_target": "请输入合法的 IPv4、IPv6 或域名（如 example.com）；不支持 URL、端口、CIDR 或命令参数。",
       "invalid_family": "请选择有效的 IP 版本。",
       "invalid_tool": "未知的测试工具。",
       "disabled": "服务器已禁用此工具。",
@@ -96,7 +95,7 @@
   "more_tools": "更多工具",
   "open": "打开",
   "file_speedtest_hint": "直接从此服务器下载测试文件以测量吞吐量。",
-  "librespeed_hint": "测量浏览器与此服务器之间的下载与上传速度。",
+  "librespeed_hint": "测量浏览器与此服务器之间的吞吐量、空闲与满载延迟及抖动。",
   "traffic_hint": "服务器网络接口的实时吞吐量。",
   "traffic_rx_total": "累计接收",
   "traffic_tx_total": "累计发送",
@@ -128,5 +127,30 @@
     "upload": "上传速度",
     "pending": "等待开始",
     "result": "查看结果"
+  },
+  "speedtest": {
+    "connections": "连接数",
+    "single": "单线程",
+    "multi": "多线程 ×{count}",
+    "latency": "延迟",
+    "jitter": "抖动",
+    "download_latency": "下载时延迟",
+    "upload_latency": "上传时延迟",
+    "download_jitter": "下载时抖动",
+    "upload_jitter": "上传时抖动",
+    "downloaded": "已下载",
+    "uploaded": "已上传",
+    "duration": "用时",
+    "sustained": "持续速率",
+    "again": "重新测试",
+    "failed": "测速失败，请检查网络后重试。",
+    "hint": "延迟为空闲时测得；下载/上传时延迟为链路满载时测得（反映缓冲膨胀）。",
+    "phase": {
+      "idle": "就绪",
+      "latency": "正在测量延迟…",
+      "download": "正在测试下载…",
+      "upload": "正在测试上传…",
+      "done": "已完成"
+    }
   }
 }

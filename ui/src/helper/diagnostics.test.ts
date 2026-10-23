@@ -8,6 +8,7 @@ import {
   lossTone,
   summarizePing,
   isValidTarget,
+  normalizeTarget,
   rowKey,
   updateDiagnosticRows
 } from './diagnostics.ts'
@@ -111,4 +112,46 @@ test('Ping summary counts timeouts as loss', () => {
     { seq: 3, latency_ms: 20 }
   ])
   assert.deepEqual(summary, { sent: 4, received: 3, loss: 25, min: 10, avg: 20, max: 30 })
+})
+
+test('Targets are trimmed and IDNs converted to Punycode before validation', () => {
+  const cases: [string, string][] = [
+    [' example.com', 'example.com'],
+    ['example.com \t\r\n', 'example.com'],
+    ['\u3000例子.测试\u3000', 'xn--fsqu00a.xn--0zwm56d'],
+    ['例子.测试', 'xn--fsqu00a.xn--0zwm56d'],
+    ['例子。测试', 'xn--fsqu00a.xn--0zwm56d'],
+    ['Bücher.DE', 'xn--bcher-kva.de'],
+    ['münchen.de.', 'xn--mnchen-3ya.de.'],
+    ['ｅxample.com', 'example.com'],
+    ['１２７.０.０.１', '127.0.0.1'],
+    ['xn--fsqu00a.xn--0zwm56d', 'xn--fsqu00a.xn--0zwm56d'],
+    ['2001:db8::1', '2001:db8::1']
+  ]
+  for (const [input, expected] of cases) {
+    assert.equal(normalizeTarget(input), expected, JSON.stringify(input))
+    assert.equal(isValidTarget(normalizeTarget(input)), true, JSON.stringify(input))
+  }
+})
+
+test('Normalisation never turns URL-like or malformed input into a valid target', () => {
+  for (const input of [
+    '',
+    '   ',
+    '例子.测试:80',
+    'http://例子.测试',
+    '例子.测试/a',
+    'user@例子.测试',
+    '例子 .测试',
+    '-例.com',
+    '例-.com',
+    '例.com;id',
+    '--help',
+    '1.1.1.1 && id',
+    'example.com\n--output=/tmp/a'
+  ]) {
+    assert.equal(isValidTarget(normalizeTarget(input)), false, JSON.stringify(input))
+  }
+  // Pure ASCII is only trimmed, never rewritten.
+  assert.equal(normalizeTarget(' EXAMPLE.COM '), 'EXAMPLE.COM')
 })

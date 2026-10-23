@@ -1,5 +1,4 @@
 import { fileURLToPath, URL } from 'node:url'
-import { copyFileSync, existsSync, lstatSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
@@ -41,17 +40,5 @@ export default defineConfig({
       }
     }
   },
-  plugins: [
-    vue(),
-    tailwindcss(),
-    {
-      name: 'copy-speedtest-worker',
-      buildStart() {
-        const destination = new URL('./public/speedtest_worker.js', import.meta.url)
-        if (!existsSync(destination) || !lstatSync(destination).isSymbolicLink()) {
-          copyFileSync(new URL('./speedtest/speedtest_worker.js', import.meta.url), destination)
-        }
-      }
-    }
-  ]
+  plugins: [vue(), tailwindcss()]
 })
