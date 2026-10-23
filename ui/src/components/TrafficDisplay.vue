@@ -1,256 +1,157 @@
-<script setup>
-import { useAppStore } from '@/stores/app'
-import { onUnmounted, toRaw } from 'vue'
-import { formatBytes } from '@/helper/unit'
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { ApexOptions } from 'apexcharts'
 import VueApexCharts from 'vue3-apexcharts'
+import { ArrowDown, ArrowUp, Activity, Loader2 } from '@lucide/vue'
+import { Card } from '@/components/ui/card'
+import { useChartTheme } from '@/composables/chart'
+import { appendTrafficSample, parseTrafficEvent, type InterfaceTraffic } from '@/helper/traffic'
+import { formatBytes } from '@/helper/unit'
+import { useAppStore } from '@/stores/app'
+
+interface CacheEntry {
+  InterfaceName: string
+  Caches: [number, number, number][] | null
+}
 
 const appStore = useAppStore()
-const interfaces = ref({})
-const handleCache = (e) => {
-  const data = JSON.parse(e.data)
-  for (var ifaceIndex in data) {
-    const iface = data[ifaceIndex]
-    const ifaceName = iface.InterfaceName
-    if (!Object.hasOwn(interfaces.value, ifaceName)) {
-      createGraph(ifaceName)
-    }
-    let localIface = interfaces.value[ifaceName]
-    for (var point of data[ifaceIndex].Caches) {
-      localIface.receive = point[1]
-      localIface.send = point[2]
-      updateSerieByInterface(ifaceName, localIface, new Date(point[0] * 1000))
-    }
+const { baseOptions } = useChartTheme()
+const interfaces = ref<Record<string, InterfaceTraffic>>({})
+
+function addSample(name: string, time: number, rx: number, tx: number): void {
+  interfaces.value[name] = appendTrafficSample(interfaces.value[name], name, time, rx, tx)
+}
+
+const handleCache = (e: MessageEvent<string>) => {
+  let data: Record<string, CacheEntry | null>
+  try {
+    data = JSON.parse(e.data) as Record<string, CacheEntry | null>
+  } catch {
+    return
+  }
+  for (const entry of Object.values(data)) {
+    if (!entry) continue
+    for (const [time, rx, tx] of entry.Caches ?? []) addSample(entry.InterfaceName, time, rx, tx)
   }
 }
 
-const handleTrafficUpdate = (e) => {
-  const data = e.data.split(',')
-  const ifaceName = data[0]
-  const time = data[1]
-
-  if (!Object.hasOwn(interfaces.value, ifaceName)) {
-    createGraph(ifaceName)
-  }
-
-  let iface = interfaces.value[ifaceName]
-  iface.receive = data[2]
-  iface.send = data[3]
-  updateSerieByInterface(ifaceName, iface, new Date(time * 1000))
+const handleTrafficUpdate = (e: MessageEvent<string>) => {
+  const sample = parseTrafficEvent(e.data)
+  if (sample) addSample(sample.name, sample.time, sample.rx, sample.tx)
 }
 
-const createGraph = (interfaceName) => {
-  const theRef = ref()
-  interfaces.value[interfaceName] = {
-    ref: null,
-    theCompoent: null,
-    traffic: {
-      receive: null,
-      send: null
-    },
-    lines: [[], []],
-    categories: [],
-    receive: 0,
-    send: 0,
-    lastReceive: 0,
-    lastSend: 0,
-    chartOptions: {
-      chart: {
-        id: 'interface-' + interfaceName + '-chart',
-        foreColor: '#e8e8e8',
-        animations: {
-          enabled: true,
-          easing: 'linear',
-          dynamicAnimation: {
-            speed: 1000
-          },
-          animateGradually: {
-            enabled: true,
-            delay: 300
-          }
-        },
-        zoom: {
-          enabled: false
-        },
-        toolbar: {
-          show: false
-        },
-        tooltip: {
-          theme: 'dark'
-        }
-      },
-
-      xaxis: {
-        range: 10,
-        type: 'category',
-        categories: ['']
-      },
-      yaxis: {
-        labels: {
-          formatter: (value) => {
-            return formatBytes(value, 2, true)
-          }
-        }
-      },
-      tooltip: {
-        x: {
-          format: 'dd MMM yyyy'
-        }
-      },
-      dataLabels: {
-        enabled: false
-      },
-      markers: {
-        size: 0
-      },
-      stroke: {
-        curve: 'smooth'
-      }
-    },
-    series: [
-      {
-        type: 'area',
-        name: 'Receive',
-        data: []
-      },
-      {
-        type: 'area',
-        name: 'Send',
-        data: []
-      }
-    ]
-  }
-  interfaces.value[interfaceName].theCompoent = () =>
-    h(VueApexCharts, {
-      ref: theRef,
-      type: 'area',
-      options: interfaces.value[interfaceName].chartOptions,
-      series: interfaces.value[interfaceName].series
-    })
-  interfaces.value[interfaceName].ref = theRef
-  return
+let listening: EventSource | undefined
+function listen(source: EventSource | undefined): void {
+  listening?.removeEventListener('InterfaceCache', handleCache)
+  listening?.removeEventListener('InterfaceTraffic', handleTrafficUpdate)
+  listening = source
+  source?.addEventListener('InterfaceCache', handleCache)
+  source?.addEventListener('InterfaceTraffic', handleTrafficUpdate)
 }
+onMounted(() => listen(appStore.source))
+watch(() => appStore.source, listen)
+onUnmounted(() => listen(undefined))
 
-const updateSerieByInterface = (interfaceName, iface, date = null, pointname = null) => {
-  let nowPointName
-  if (date === null) {
-    date = new Date()
-  }
+const sortedInterfaces = computed(() =>
+  Object.values(interfaces.value).sort((a, b) => a.name.localeCompare(b.name))
+)
 
-  if (pointname !== null) {
-    nowPointName = pointname
-  } else {
-    nowPointName =
-      date.getHours().toString().padStart(2, '0') +
-      ':' +
-      date.getMinutes().toString().padStart(2, '0') +
-      ':' +
-      date.getSeconds().toString().padStart(2, '0')
-  }
-
-  let categories = iface.categories
-  let receiveDatas = iface.lines[0]
-  let sendDatas = iface.lines[1]
-
-  if (iface.lastReceive == 0) {
-    iface.lastReceive = iface.receive
-  }
-
-  if (iface.lastSend == 0) {
-    iface.lastSend = iface.send
-  }
-
-  let receive = iface.receive - iface.lastReceive
-  let send = iface.send - iface.lastSend
-  iface.lastReceive = iface.receive
-  iface.lastSend = iface.send
-  iface.traffic.receive = receive
-  iface.traffic.send = send
-  receiveDatas.push(receive)
-  sendDatas.push(send)
-
-  categories.push(nowPointName)
-  if (receiveDatas.length > 30) {
-    interfaces.value[interfaceName].categories = categories.slice(-10)
-    interfaces.value[interfaceName].lines[0] = receiveDatas.slice(-10)
-    interfaces.value[interfaceName].lines[1] = sendDatas.slice(-10)
-  }
-  categories = categories.slice(0)
-  receiveDatas = receiveDatas.slice(0)
-  sendDatas = sendDatas.slice(0)
-  if (!iface.ref) return
-  iface.ref.updateOptions({
-    xaxis: {
-      categories: toRaw(categories)
+const chartOptions = computed<ApexOptions>(() => ({
+  ...baseOptions.value,
+  chart: { ...baseOptions.value.chart, animations: { enabled: false } },
+  xaxis: {
+    type: 'datetime',
+    labels: { datetimeUTC: false, format: 'HH:mm:ss', style: { fontSize: '10px' } },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+    tooltip: { enabled: false }
+  },
+  yaxis: {
+    min: 0,
+    forceNiceScale: true,
+    labels: {
+      formatter: (value: number) => formatBytes(value, 1, true),
+      style: { fontSize: '10px' }
     }
-  })
+  },
+  tooltip: {
+    ...baseOptions.value.tooltip,
+    x: { format: 'HH:mm:ss' },
+    y: { formatter: (value: number) => formatBytes(value, 2, true) }
+  }
+}))
 
-  iface.ref.updateSeries([
-    {
-      name: 'Receive',
-      data: toRaw(receiveDatas)
-    },
-    {
-      name: 'Send',
-      data: toRaw(sendDatas)
-    }
-  ])
+function seriesFor(iface: InterfaceTraffic) {
+  return [
+    { name: 'RX', data: iface.points.map((point) => [point.time, point.rx]) },
+    { name: 'TX', data: iface.points.map((point) => [point.time, point.tx]) }
+  ]
 }
-onMounted(() => {
-  appStore.source.addEventListener('InterfaceCache', handleCache)
-  appStore.source.addEventListener('InterfaceTraffic', handleTrafficUpdate)
-})
-
-onUnmounted(() => {
-  appStore.source.removeEventListener('InterfaceCache', handleCache)
-  appStore.source.removeEventListener('InterfaceTraffic', handleTrafficUpdate)
-})
 </script>
 
 <template>
-  <n-card hoverable>
-    <template #header> {{ $t('server_bandwidth_graph') }} </template>
-    <n-grid x-gap="12" cols="1 s:1 m:1 l:2 xl:2 2xl:2" responsive="screen">
-      <n-gi v-for="(interfaceData, interfaceName) in interfaces" :key="interfaceName">
-        <n-card :title="interfaceName">
-          <n-grid x-gap="12" :cols="2">
-            <n-gi>
-              <h3>{{ $t('server_bandwidth_graph_receive') }}</h3>
-              <span class="traffic-display">
-                {{ formatBytes(interfaceData.traffic.receive, 2, true) }} /
-                {{ formatBytes(interfaceData.receive) }}
-              </span>
-            </n-gi>
-            <n-gi>
-              <h3>{{ $t('server_bandwidth_graph_sended') }}</h3>
-              <span class="traffic-display">
-                {{ formatBytes(interfaceData.traffic.send, 2, true) }} /
-                {{ formatBytes(interfaceData.send) }}
-              </span>
-            </n-gi>
-            <n-gi span="2">
-              <component :is="interfaceData.theCompoent" />
-            </n-gi>
-          </n-grid>
-        </n-card>
-      </n-gi>
-    </n-grid>
-  </n-card>
+  <Card class="gap-0 overflow-hidden py-0">
+    <div class="flex items-start justify-between gap-3 p-5 sm:p-6">
+      <div>
+        <h2 class="text-base font-semibold tracking-tight">{{ $t('server_bandwidth_graph') }}</h2>
+        <p class="text-muted-foreground mt-1 text-sm">{{ $t('traffic_hint') }}</p>
+      </div>
+      <Activity class="text-primary size-5 animate-pulse" />
+    </div>
+    <div
+      v-if="!sortedInterfaces.length"
+      class="text-muted-foreground flex items-center justify-center gap-2 border-t py-10 text-sm"
+    >
+      <Loader2 class="size-4 animate-spin" />
+      {{ $t('traffic_waiting') }}
+    </div>
+    <div v-else class="grid border-t" :class="sortedInterfaces.length > 1 && 'xl:grid-cols-2'">
+      <section
+        v-for="iface in sortedInterfaces"
+        :key="iface.name"
+        class="border-b p-5 last:border-b-0 sm:p-6 xl:odd:border-r xl:[&:nth-last-child(2):nth-child(odd)]:border-b-0"
+        :data-testid="`traffic-${iface.name}`"
+      >
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <span class="bg-muted rounded-md px-2 py-0.5 font-mono text-xs font-medium">
+            {{ iface.name }}
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <div class="text-muted-foreground flex items-center gap-1 text-xs">
+              <ArrowDown class="text-chart-1 size-3.5" />
+              {{ $t('server_bandwidth_graph_receive') }}
+            </div>
+            <div class="tabular mt-0.5 font-mono text-lg font-semibold">
+              {{ formatBytes(iface.points.at(-1)?.rx ?? 0, 2, true) }}
+            </div>
+            <div class="text-muted-foreground tabular font-mono text-[11px]">
+              Σ {{ formatBytes(iface.totalRx) }}
+            </div>
+          </div>
+          <div>
+            <div class="text-muted-foreground flex items-center gap-1 text-xs">
+              <ArrowUp class="text-chart-2 size-3.5" />
+              {{ $t('server_bandwidth_graph_sended') }}
+            </div>
+            <div class="tabular mt-0.5 font-mono text-lg font-semibold">
+              {{ formatBytes(iface.points.at(-1)?.tx ?? 0, 2, true) }}
+            </div>
+            <div class="text-muted-foreground tabular font-mono text-[11px]">
+              Σ {{ formatBytes(iface.totalTx) }}
+            </div>
+          </div>
+        </div>
+        <div class="-mx-2 mt-3 h-40">
+          <VueApexCharts
+            type="area"
+            height="100%"
+            :options="chartOptions"
+            :series="seriesFor(iface)"
+          />
+        </div>
+      </section>
+    </div>
+  </Card>
 </template>
-
-<style scoped>
-h3 {
-  text-align: center;
-}
-
-.traffic-display {
-  text-align: center;
-  display: block;
-}
-</style>
-
-<style>
-.apexcharts-tooltip-title,
-.apexcharts-tooltip-text {
-  color: #181818;
-}
-</style>

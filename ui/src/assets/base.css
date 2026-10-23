@@ -1,6 +1,173 @@
-#app {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 2rem;
-    font-weight: normal;
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(0.985 0.002 165);
+  --foreground: oklch(0.21 0.015 165);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.015 165);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.015 165);
+  --primary: oklch(0.52 0.12 163);
+  --primary-foreground: oklch(0.985 0.01 165);
+  --secondary: oklch(0.96 0.006 165);
+  --secondary-foreground: oklch(0.26 0.02 165);
+  --muted: oklch(0.96 0.006 165);
+  --muted-foreground: oklch(0.52 0.015 165);
+  --accent: oklch(0.95 0.015 165);
+  --accent-foreground: oklch(0.26 0.03 165);
+  --destructive: oklch(0.58 0.22 27);
+  --success: oklch(0.6 0.15 155);
+  --warning: oklch(0.72 0.16 70);
+  --border: oklch(0.91 0.008 165);
+  --input: oklch(0.9 0.008 165);
+  --ring: oklch(0.6 0.12 163);
+  --chart-1: oklch(0.6 0.13 163);
+  --chart-2: oklch(0.62 0.17 250);
+  --grid-line: oklch(0.21 0.015 165 / 0.035);
+  --terminal: oklch(0.2 0.012 260);
+  --terminal-foreground: oklch(0.9 0.01 260);
+}
+
+.dark {
+  --background: oklch(0.155 0.008 200);
+  --foreground: oklch(0.96 0.005 165);
+  --card: oklch(0.195 0.009 200);
+  --card-foreground: oklch(0.96 0.005 165);
+  --popover: oklch(0.21 0.01 200);
+  --popover-foreground: oklch(0.96 0.005 165);
+  --primary: oklch(0.72 0.14 163);
+  --primary-foreground: oklch(0.18 0.03 165);
+  --secondary: oklch(0.25 0.01 200);
+  --secondary-foreground: oklch(0.96 0.005 165);
+  --muted: oklch(0.25 0.01 200);
+  --muted-foreground: oklch(0.7 0.012 200);
+  --accent: oklch(0.27 0.02 180);
+  --accent-foreground: oklch(0.96 0.005 165);
+  --destructive: oklch(0.68 0.19 22);
+  --success: oklch(0.72 0.15 155);
+  --warning: oklch(0.8 0.15 75);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.65 0.12 163);
+  --chart-1: oklch(0.74 0.14 163);
+  --chart-2: oklch(0.7 0.14 250);
+  --grid-line: oklch(1 0 0 / 0.03);
+  --terminal: oklch(0.13 0.008 220);
+  --terminal-foreground: oklch(0.9 0.01 220);
+}
+
+@theme inline {
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-terminal: var(--terminal);
+  --color-terminal-foreground: var(--terminal-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground min-h-screen antialiased;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Markdown (sponsor message) */
+.prose-md {
+  @apply text-sm leading-relaxed text-foreground/90;
+}
+.prose-md :where(h1, h2, h3, h4) {
+  @apply mt-4 mb-2 font-semibold text-foreground first:mt-0;
+}
+.prose-md h1 {
+  @apply text-xl;
+}
+.prose-md h2 {
+  @apply text-lg;
+}
+.prose-md :where(p, ul, ol, pre, blockquote, table) {
+  @apply my-2 first:mt-0 last:mb-0;
+}
+.prose-md :where(ul) {
+  @apply list-disc pl-5;
+}
+.prose-md :where(ol) {
+  @apply list-decimal pl-5;
+}
+.prose-md a {
+  @apply font-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary;
+}
+.prose-md code {
+  @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.85em];
+}
+.prose-md pre {
+  @apply overflow-x-auto rounded-md bg-muted p-3;
+}
+.prose-md pre code {
+  @apply bg-transparent p-0;
+}
+.prose-md blockquote {
+  @apply border-l-2 border-primary/40 pl-3 text-muted-foreground;
+}
+.prose-md img {
+  @apply inline-block max-w-full;
+}
+
+/* ApexCharts tooltip theming */
+.apexcharts-tooltip.apexcharts-theme-light,
+.apexcharts-tooltip.apexcharts-theme-dark {
+  @apply !border-border !bg-popover !text-popover-foreground !shadow-md;
+}
+.apexcharts-tooltip .apexcharts-tooltip-title {
+  @apply !border-border !bg-muted !text-popover-foreground;
+}
+.apexcharts-xaxistooltip {
+  display: none;
 }
