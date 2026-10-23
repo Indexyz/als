@@ -1,6 +1,12 @@
 name: Build with release
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build
+        required: true
+        type: string
   push:
     tags: ['*']
 
@@ -14,6 +20,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           submodules: recursive
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
       - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: ui/.nvmrc
@@ -61,6 +68,8 @@ jobs:
             cgo: '1'
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
       - uses: actions/setup-go@v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -86,6 +95,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: backend/als-${{ matrix.goos }}-${{ matrix.goarch }}
           asset_name: als-${{ matrix.goos }}-${{ matrix.goarch }}
-          tag: ${{ github.ref }}
+          tag: ${{ inputs.tag || github.ref }}
           overwrite: true
           make_latest: legacy
