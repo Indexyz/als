@@ -73,7 +73,7 @@ onMounted(async () => {
                 text
                 tag="a"
                 target="_blank"
-                href="https://github.com/wikihost-opensource/als"
+                href="https://github.com/Indexyz/als"
               >
                 WIKIHOST Opensource - ALS (Github)
               </n-button>

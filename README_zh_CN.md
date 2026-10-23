@@ -83,4 +83,4 @@ Code is licensed under MIT Public License.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=wikihost-opensource/als&type=Date)](https://star-history.com/#wikihost-opensource/als&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Indexyz/als&type=Date)](https://star-history.com/#Indexyz/als&Date)
